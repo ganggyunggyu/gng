@@ -1,26 +1,21 @@
 // AI 모델 상수 정의
 export const Model = {
-  // OpenAI GPT-5 시리즈
-  GPT5: 'gpt-5-2025-08-07',
-  GPT5_1: 'gpt-5.1-2025-11-13',
-  GPT5_2: 'gpt-5.2-2025-12-11',
-  GPT5_MINI: 'gpt-5-mini-2025-08-07',
-  GPT5_NANO: 'gpt-5-nano-2025-08-07',
-  GPT5_CHAT: 'gpt-5-chat-latest',
-
   // OpenAI GPT-4 시리즈
-  GPT4O: 'chatgpt-4o-latest',
-  GPT4O_API: 'gpt-4o',
+  GPT4O: 'gpt-4o',
   GPT4O_MINI: 'gpt-4o-mini',
-  GPT4_1: 'gpt-4.1-2025-04-14',
-  GPT4_1_MINI: 'gpt-4.1-mini-2025-04-14',
   GPT4_TURBO: 'gpt-4-turbo',
+  // OpenAI Reasoning 모델
+  O1: 'o1',
+  O1_MINI: 'o1-mini',
+  O1_PREVIEW: 'o1-preview',
+  O3_MINI: 'o3-mini',
+  O4_MINI: 'o4-mini',
 
   // Google Gemini
-  GEMINI_3_PRO: 'gemini-3-pro-preview',
-  GEMINI_3_FLASH: 'gemini-3.0-flash',
-  GEMINI_3_FLASH_PREVIEW: 'gemini-3-flash-preview',
-  IMAGEN_4: 'imagen-4.0-generate-001',
+  GEMINI_2_FLASH: 'gemini-2.0-flash',
+  GEMINI_2_FLASH_LITE: 'gemini-2.0-flash-lite',
+  GEMINI_1_5_PRO: 'gemini-1.5-pro',
+  GEMINI_1_5_FLASH: 'gemini-1.5-flash',
 
   // Anthropic Claude
   CLAUDE_SONNET_4_5: 'claude-sonnet-4-5-20250929',
@@ -50,9 +45,47 @@ export const Model = {
 
 export type ModelName = (typeof Model)[keyof typeof Model];
 
+// 모델별 기능 설정
+export interface ModelCapabilities {
+  supportsTemperature: boolean;
+  supportsMaxTokens: boolean;
+  supportsSystemPrompt: boolean;
+  isReasoning: boolean;
+}
+
+const DEFAULT_CAPABILITIES: ModelCapabilities = {
+  supportsTemperature: true,
+  supportsMaxTokens: true,
+  supportsSystemPrompt: true,
+  isReasoning: false,
+};
+
+const REASONING_CAPABILITIES: ModelCapabilities = {
+  supportsTemperature: false,
+  supportsMaxTokens: true,
+  supportsSystemPrompt: false,
+  isReasoning: true,
+};
+
+const MODEL_CAPABILITIES: Partial<Record<string, Partial<ModelCapabilities>>> = {
+  [Model.O1]: REASONING_CAPABILITIES,
+  [Model.O1_MINI]: REASONING_CAPABILITIES,
+  [Model.O1_PREVIEW]: REASONING_CAPABILITIES,
+  [Model.O3_MINI]: REASONING_CAPABILITIES,
+  [Model.O4_MINI]: REASONING_CAPABILITIES,
+  [Model.DEEPSEEK_RES]: REASONING_CAPABILITIES,
+  [Model.GROK_4_RES]: REASONING_CAPABILITIES,
+  [Model.GROK_4_1_RES]: REASONING_CAPABILITIES,
+};
+
+export function getModelCapabilities(model: string): ModelCapabilities {
+  const override = MODEL_CAPABILITIES[model];
+  return override ? { ...DEFAULT_CAPABILITIES, ...override } : DEFAULT_CAPABILITIES;
+}
+
 // 모델에서 Provider 자동 추출
 export function getProviderFromModel(model: string): Provider {
-  if (model.startsWith('gpt-') || model.startsWith('chatgpt-')) return 'openai';
+  if (model.startsWith('gpt-') || model.startsWith('chatgpt-') || model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4')) return 'openai';
   if (model.startsWith('claude-')) return 'anthropic';
   if (model.startsWith('gemini-') || model.startsWith('imagen-'))
     return 'gemini';
@@ -73,20 +106,7 @@ export type Provider =
 
 // Provider별 모델 목록
 export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
-  openai: [
-    Model.GPT5,
-    Model.GPT5_1,
-    Model.GPT5_2,
-    Model.GPT5_MINI,
-    Model.GPT5_NANO,
-    Model.GPT5_CHAT,
-    Model.GPT4O,
-    Model.GPT4O_API,
-    Model.GPT4O_MINI,
-    Model.GPT4_1,
-    Model.GPT4_1_MINI,
-    Model.GPT4_TURBO,
-  ],
+  openai: [Model.GPT4O, Model.GPT4O_MINI, Model.GPT4_TURBO],
   anthropic: [
     Model.CLAUDE_SONNET_4_5,
     Model.CLAUDE_OPUS_4_5,
@@ -95,10 +115,10 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
     Model.CLAUDE_OPUS_3,
   ],
   gemini: [
-    Model.GEMINI_3_PRO,
-    Model.GEMINI_3_FLASH,
-    Model.GEMINI_3_FLASH_PREVIEW,
-    Model.IMAGEN_4,
+    Model.GEMINI_2_FLASH,
+    Model.GEMINI_2_FLASH_LITE,
+    Model.GEMINI_1_5_PRO,
+    Model.GEMINI_1_5_FLASH,
   ],
   xai: [
     Model.GROK_4,

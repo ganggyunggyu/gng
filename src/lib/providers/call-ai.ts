@@ -1,6 +1,38 @@
 import type { InternalMessage, Provider } from '@/types';
 import { getAdapter } from './index';
-import { getProviderFromModel, type ModelName } from './models';
+import { getProviderFromModel, getModelCapabilities, type ModelName } from './models';
+
+/**
+ * SSE 스트림 파싱 공통 함수
+ */
+async function* parseSSEStream(stream: ReadableStream<Uint8Array>): AsyncGenerator<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const chunk = decoder.decode(value, { stream: true });
+    for (const line of chunk.split('\n')) {
+      if (!line.startsWith('data:')) continue;
+      const data = line.slice(5).trim();
+      if (!data) continue;
+
+      try {
+        const parsed = JSON.parse(data);
+        if (parsed.type === 'delta' && typeof parsed.data === 'string') {
+          yield parsed.data;
+        } else if (parsed.type === 'error') {
+          throw new Error(parsed.data?.error || 'Unknown error');
+        }
+      } catch (e) {
+        if (e instanceof SyntaxError) continue;
+        throw e;
+      }
+    }
+  }
+}
 
 export interface CallAIParams {
   model: ModelName | string;
@@ -43,45 +75,23 @@ export async function callAI({
 }: CallAIParams): Promise<CallAIResult> {
   const provider = getProviderFromModel(model);
   const adapter = getAdapter(provider);
+  const capabilities = getModelCapabilities(model);
 
   const stream = await adapter.chat({
     messages,
     modelConfig: {
       provider,
       modelName: model,
-      temperature,
-      maxTokens,
+      temperature: capabilities.supportsTemperature ? temperature : undefined,
+      maxTokens: capabilities.supportsMaxTokens ? maxTokens : undefined,
     },
-    systemPrompt,
+    systemPrompt: capabilities.supportsSystemPrompt ? systemPrompt : undefined,
     signal,
   });
 
-  // 스트림을 문자열로 수집
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
   let content = '';
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
-
-    for (const line of lines) {
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'delta' && typeof parsed.data === 'string') {
-          content += parsed.data;
-        }
-      } catch {
-        // Skip invalid JSON
-      }
-    }
+  for await (const chunk of parseSSEStream(stream)) {
+    content += chunk;
   }
 
   return { content, provider, model };
@@ -114,45 +124,19 @@ export async function* callAIStream({
 }: CallAIParams): AsyncGenerator<string> {
   const provider = getProviderFromModel(model);
   const adapter = getAdapter(provider);
+  const capabilities = getModelCapabilities(model);
 
   const stream = await adapter.chat({
     messages,
     modelConfig: {
       provider,
       modelName: model,
-      temperature,
-      maxTokens,
+      temperature: capabilities.supportsTemperature ? temperature : undefined,
+      maxTokens: capabilities.supportsMaxTokens ? maxTokens : undefined,
     },
-    systemPrompt,
+    systemPrompt: capabilities.supportsSystemPrompt ? systemPrompt : undefined,
     signal,
   });
 
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
-
-    for (const line of lines) {
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'delta' && typeof parsed.data === 'string') {
-          yield parsed.data;
-        } else if (parsed.type === 'error') {
-          throw new Error(parsed.data?.error || 'Unknown error');
-        }
-      } catch (e) {
-        if (e instanceof SyntaxError) continue; // Skip invalid JSON
-        throw e;
-      }
-    }
-  }
+  yield* parseSSEStream(stream);
 }

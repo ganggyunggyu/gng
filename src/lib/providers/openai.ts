@@ -15,17 +15,26 @@ export const openaiAdapter: ProviderAdapter = {
       ? [{ role: 'system' as const, content: systemPrompt }, ...messages]
       : messages;
 
+    const body: Record<string, unknown> = {
+      model: modelConfig.modelName,
+      messages: formattedMessages,
+      stream: true,
+    };
+
+    if (modelConfig.temperature !== undefined) {
+      body.temperature = modelConfig.temperature;
+    }
+    if (modelConfig.maxTokens !== undefined) {
+      body.max_tokens = modelConfig.maxTokens;
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: modelConfig.modelName,
-        messages: formattedMessages,
-        stream: true,
-      }),
+      body: JSON.stringify(body),
       signal,
     });
 
