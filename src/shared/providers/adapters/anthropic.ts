@@ -1,8 +1,6 @@
-import type { ProviderAdapter, ChatParams } from './types';
+import type { ProviderAdapter, ChatParams } from '../types';
 import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from './types';
-import { aiApiClient } from './axios-instance';
-import type { Readable } from 'stream';
+import { createSSEStream } from '../types';
 
 export const anthropicAdapter: ProviderAdapter = {
   name: 'anthropic',
@@ -18,33 +16,43 @@ export const anthropicAdapter: ProviderAdapter = {
       content: m.content,
     }));
 
-    const response = await aiApiClient.post<Readable>(
-      'https://api.anthropic.com/v1/messages',
-      {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
         model: modelConfig.modelName,
         system: systemPrompt,
         messages: formattedMessages,
         max_tokens: modelConfig.maxTokens ?? 4096,
         stream: true,
-      },
-      {
-        headers: {
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        responseType: 'stream',
-        signal,
-      },
-    );
+      }),
+      signal,
+    });
 
-    const stream = response.data;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Anthropic API error: ${error}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
 
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
+      const decoder = new TextDecoder();
       let buffer = '';
 
       try {
-        for await (const chunk of stream) {
-          buffer += chunk.toString();
+        while (true) {
+          const { done, value } = await reader!.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 

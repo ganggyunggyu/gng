@@ -1,8 +1,6 @@
-import type { ProviderAdapter, ChatParams } from './types';
+import type { ProviderAdapter, ChatParams } from '../types';
 import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from './types';
-import { aiApiClient } from './axios-instance';
-import type { Readable } from 'stream';
+import { createSSEStream } from '../types';
 
 export const geminiAdapter: ProviderAdapter = {
   name: 'gemini',
@@ -18,30 +16,45 @@ export const geminiAdapter: ProviderAdapter = {
       parts: [{ text: m.content }],
     }));
 
-    const response = await aiApiClient.post<Readable>(
+    const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelConfig.modelName}:streamGenerateContent?key=${apiKey}&alt=sse`,
       {
-        contents,
-        systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-        generationConfig: {
-          temperature: modelConfig.temperature ?? 0.7,
-          maxOutputTokens: modelConfig.maxTokens ?? 4096,
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      },
-      {
-        responseType: 'stream',
+        body: JSON.stringify({
+          contents,
+          systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+          generationConfig: {
+            temperature: modelConfig.temperature ?? 0.7,
+            maxOutputTokens: modelConfig.maxTokens ?? 4096,
+          },
+        }),
         signal,
       },
     );
 
-    const stream = response.data;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Gemini API error: ${error}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
 
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
+      const decoder = new TextDecoder();
       let buffer = '';
 
       try {
-        for await (const chunk of stream) {
-          buffer += chunk.toString();
+        while (true) {
+          const { done, value } = await reader!.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 

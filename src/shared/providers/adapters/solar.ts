@@ -1,46 +1,56 @@
-import type { ProviderAdapter, ChatParams } from './types';
+import type { ProviderAdapter, ChatParams } from '../types';
 import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from './types';
-import { aiApiClient } from './axios-instance';
-import type { Readable } from 'stream';
+import { createSSEStream } from '../types';
 
-export const openaiAdapter: ProviderAdapter = {
-  name: 'openai',
+export const solarAdapter: ProviderAdapter = {
+  name: 'solar',
 
   async chat({ messages, modelConfig, systemPrompt, signal }: ChatParams) {
-    const apiKey = process.env.OPENAI_API_KEY;
+    const apiKey = process.env.SOLAR_API_KEY;
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
+      throw new Error('SOLAR_API_KEY is not configured');
     }
 
     const formattedMessages = systemPrompt
       ? [{ role: 'system' as const, content: systemPrompt }, ...messages]
       : messages;
 
-    const response = await aiApiClient.post<Readable>(
-      'https://api.openai.com/v1/chat/completions',
-      {
+    const response = await fetch('https://api.upstage.ai/v1/solar/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
         model: modelConfig.modelName,
         messages: formattedMessages,
         temperature: modelConfig.temperature ?? 0.7,
         max_tokens: modelConfig.maxTokens ?? 4096,
         stream: true,
-      },
-      {
-        headers: { Authorization: `Bearer ${apiKey}` },
-        responseType: 'stream',
-        signal,
-      },
-    );
+      }),
+      signal,
+    });
 
-    const stream = response.data;
+    if (!response.ok) {
+      const error = await response.text();
+      throw new Error(`Solar API error: ${error}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
 
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
+      const decoder = new TextDecoder();
       let buffer = '';
 
       try {
-        for await (const chunk of stream) {
-          buffer += chunk.toString();
+        while (true) {
+          const { done, value } = await reader!.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
           const lines = buffer.split('\n');
           buffer = lines.pop() || '';
 
