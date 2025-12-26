@@ -33,18 +33,14 @@ const PROVIDER_INFO: Record<Provider, { label: string; icon: typeof Sparkles; co
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
   // OpenAI
-  [Model.GPT5]: 'GPT-5',
-  [Model.GPT5_1]: 'GPT-5.1',
-  [Model.GPT5_2]: 'GPT-5.2',
-  [Model.GPT5_MINI]: 'GPT-5 Mini',
-  [Model.GPT5_NANO]: 'GPT-5 Nano',
-  [Model.GPT5_CHAT]: 'GPT-5 Chat',
-  [Model.GPT4O]: 'GPT-4o (Latest)',
-  [Model.GPT4O_API]: 'GPT-4o',
+  [Model.GPT4O]: 'GPT-4o',
   [Model.GPT4O_MINI]: 'GPT-4o Mini',
-  [Model.GPT4_1]: 'GPT-4.1',
-  [Model.GPT4_1_MINI]: 'GPT-4.1 Mini',
   [Model.GPT4_TURBO]: 'GPT-4 Turbo',
+  [Model.O1]: 'o1',
+  [Model.O1_MINI]: 'o1 Mini',
+  [Model.O1_PREVIEW]: 'o1 Preview',
+  [Model.O3_MINI]: 'o3 Mini',
+  [Model.O4_MINI]: 'o4 Mini',
 
   // Anthropic
   [Model.CLAUDE_SONNET_4_5]: 'Claude Sonnet 4.5',
@@ -54,9 +50,10 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.CLAUDE_OPUS_3]: 'Claude Opus 3',
 
   // Gemini
-  [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
-  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
-  [Model.GEMINI_3_FLASH_PREVIEW]: 'Gemini 3 Flash Preview',
+  [Model.GEMINI_2_FLASH]: 'Gemini 2.0 Flash',
+  [Model.GEMINI_2_FLASH_LITE]: 'Gemini 2.0 Flash Lite',
+  [Model.GEMINI_1_5_PRO]: 'Gemini 1.5 Pro',
+  [Model.GEMINI_1_5_FLASH]: 'Gemini 1.5 Flash',
 
   // xAI
   [Model.GROK_4]: 'Grok-4',
@@ -66,6 +63,7 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.GROK_4_1_RES]: 'Grok-4.1 Reasoning',
   [Model.GROK_4_1_NON_RES]: 'Grok-4.1 Non-Reasoning',
   [Model.GROK_CODE]: 'Grok Code',
+  [Model.GROK_IMAGE]: 'Grok Image',
 
   // DeepSeek
   [Model.DEEPSEEK_CHAT]: 'DeepSeek Chat',

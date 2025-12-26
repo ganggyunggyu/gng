@@ -52,7 +52,7 @@ export function Sidebar() {
   const { threads, createThread, deleteThread } = useThreads();
 
   const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O_API);
+  const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O);
   const [newProjectProvider, setNewProjectProvider] = useState<Provider>('openai');
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -69,7 +69,7 @@ export function Sidebar() {
       modelName: newProjectModel,
     });
     setNewProjectName('');
-    setNewProjectModel(Model.GPT4O_API);
+    setNewProjectModel(Model.GPT4O);
     setNewProjectProvider('openai');
     setProjectDialogOpen(false);
   };

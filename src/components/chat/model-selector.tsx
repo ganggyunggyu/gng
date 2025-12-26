@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { selectedProjectAtom } from '@/stores';
 import { useProjects } from '@/lib/hooks';
-import { AVAILABLE_MODELS } from '@/lib/providers';
+import { MODELS_BY_PROVIDER } from '@/lib/providers';
 import { cn } from '@/lib/utils';
 import type { Provider } from '@/types';
 
@@ -57,13 +57,13 @@ export function ModelSelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-[200px]">
-        {(Object.keys(AVAILABLE_MODELS) as Provider[]).map((provider, idx) => (
+        {(Object.keys(MODELS_BY_PROVIDER) as Provider[]).map((provider, idx) => (
           <DropdownMenuGroup key={provider}>
             {idx > 0 && <DropdownMenuSeparator />}
             <DropdownMenuLabel className="text-xs text-muted-foreground">
               {PROVIDER_LABELS[provider]}
             </DropdownMenuLabel>
-            {AVAILABLE_MODELS[provider].map((model) => {
+            {MODELS_BY_PROVIDER[provider].map((model) => {
               const isSelected = currentProvider === provider && currentModel === model;
               return (
                 <DropdownMenuItem
