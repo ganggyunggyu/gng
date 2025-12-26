@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useRef, useCallback, type DragEvent } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
-import { Send, Square, RotateCcw, ImagePlus, X } from 'lucide-react';
+import { Send, Square, RotateCcw, ImagePlus, X, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -10,69 +10,100 @@ import {
   streamingContentAtom,
   selectedThreadAtom,
   selectedProjectAtom,
+  isImageModeAtom,
 } from '@/stores';
-import { useMessages, useThreads } from '@/lib/hooks';
-
-interface ImagePreview {
-  file: File;
-  url: string;
-}
+import { cn } from '@/lib/utils';
+import { useMessages, useThreads, useImageAttachment } from '@/lib/hooks';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
-  const [images, setImages] = useState<ImagePreview[]>([]);
-  const [isDragging, setIsDragging] = useState(false);
   const [isStreaming, setIsStreaming] = useAtom(isStreamingAtom);
+  const [isImageMode, setIsImageMode] = useAtom(isImageModeAtom);
   const setStreamingContent = useSetAtom(streamingContentAtom);
   const selectedThread = useAtomValue(selectedThreadAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);
   const abortControllerRef = useRef<AbortController | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { messages, addMessage } = useMessages();
   const { updateThread } = useThreads();
+  const {
+    images,
+    isDragging,
+    fileInputRef,
+    handleImageAdd,
+    handleImageRemove,
+    handleDragOver,
+    handleDragLeave,
+    handleDrop,
+  } = useImageAttachment();
 
-  const handleImageAdd = useCallback((files: FileList | null) => {
-    if (!files) return;
-    const newImages: ImagePreview[] = [];
-    for (const file of Array.from(files)) {
-      if (file.type.startsWith('image/')) {
-        newImages.push({
-          file,
-          url: URL.createObjectURL(file),
-        });
-      }
-    }
-    setImages((prev) => [...prev, ...newImages]);
-  }, []);
+  const handleImageGenerate = useCallback(async () => {
+    if (!input.trim() || isStreaming || !selectedThread) return;
 
-  const handleImageRemove = useCallback((index: number) => {
-    setImages((prev) => {
-      URL.revokeObjectURL(prev[index].url);
-      return prev.filter((_, i) => i !== index);
+    await addMessage({
+      threadId: selectedThread.id,
+      role: 'user',
+      content: `🎨 ${input.trim()}`,
     });
-  }, []);
 
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  }, []);
+    if (messages.length === 0) {
+      const title = `🎨 ${input.trim().slice(0, 25)}...`;
+      await updateThread(selectedThread.id, { title });
+    }
 
-  const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  }, []);
+    setInput('');
+    setIsStreaming(true);
+    setStreamingContent('Generating image...');
 
-  const handleDrop = useCallback(
-    (e: DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-      handleImageAdd(e.dataTransfer.files);
-    },
-    [handleImageAdd],
-  );
+    const startTime = Date.now();
+
+    try {
+      const response = await fetch('/api/image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: input.trim() }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate image');
+      }
+
+      const { imageUrl, revisedPrompt } = await response.json();
+
+      const content = `![Generated Image](${imageUrl})\n\n*${revisedPrompt || input.trim()}*`;
+
+      await addMessage({
+        threadId: selectedThread.id,
+        role: 'assistant',
+        content,
+        meta: {
+          provider: 'openai',
+          model: 'dall-e-3',
+          latencyMs: Date.now() - startTime,
+        },
+      });
+    } catch (error) {
+      console.error('Image generation error:', error);
+      await addMessage({
+        threadId: selectedThread.id,
+        role: 'assistant',
+        content: `Error: ${(error as Error).message}`,
+        meta: {
+          error: (error as Error).message,
+        },
+      });
+    } finally {
+      setIsStreaming(false);
+      setStreamingContent('');
+    }
+  }, [input, isStreaming, selectedThread, messages, addMessage, updateThread, setIsStreaming, setStreamingContent]);
 
   const handleSubmit = useCallback(async () => {
+    if (isImageMode) {
+      return handleImageGenerate();
+    }
+
     if (!input.trim() || isStreaming || !selectedThread || !selectedProject) return;
 
     const userMessage = await addMessage({
@@ -191,6 +222,7 @@ export function ChatInput() {
   }, [
     input,
     isStreaming,
+    isImageMode,
     selectedThread,
     selectedProject,
     messages,
@@ -198,6 +230,7 @@ export function ChatInput() {
     updateThread,
     setIsStreaming,
     setStreamingContent,
+    handleImageGenerate,
   ]);
 
   const handleStop = useCallback(() => {
@@ -223,7 +256,7 @@ export function ChatInput() {
   const canRetry = messages.length > 0 && messages[messages.length - 1]?.role === 'assistant';
 
   return (
-    <div className="border-t bg-background p-4">
+    <div className="shrink-0 border-t bg-background p-4">
       <div className="mx-auto max-w-3xl">
         {/* Image Previews */}
         {images.length > 0 && (
@@ -261,7 +294,7 @@ export function ChatInput() {
           )}
 
           <div className="flex gap-2 p-2">
-            {/* Image Button */}
+            {/* Image Attach Button */}
             <input
               ref={fileInputRef}
               type="file"
@@ -281,12 +314,28 @@ export function ChatInput() {
               <ImagePlus className="h-4 w-4" />
             </Button>
 
+            {/* Image Generate Mode Toggle */}
+            <Button
+              type="button"
+              variant={isImageMode ? 'default' : 'ghost'}
+              size="icon"
+              className={cn('shrink-0', isImageMode && 'bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600')}
+              onClick={() => setIsImageMode(!isImageMode)}
+              disabled={!selectedThread || isStreaming}
+            >
+              <Sparkles className="h-4 w-4" />
+            </Button>
+
             <Textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={
-                selectedThread ? 'Type a message...' : 'Select a project and thread to start'
+                !selectedThread
+                  ? 'Select a project and thread to start'
+                  : isImageMode
+                    ? 'Describe the image you want to generate...'
+                    : 'Type a message...'
               }
               disabled={!selectedThread || isStreaming}
               className="min-h-10 resize-none border-0 focus-visible:ring-0"

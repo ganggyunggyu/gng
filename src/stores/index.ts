@@ -25,6 +25,9 @@ export const streamingContentAtom = atom<string>('');
 // 사이드바 열림 상태
 export const sidebarOpenAtom = atom<boolean>(true);
 
+// 이미지 생성 모드
+export const isImageModeAtom = atom<boolean>(false);
+
 // 현재 선택된 프로젝트 (derived)
 export const selectedProjectAtom = atom((get) => {
   const projectId = get(selectedProjectIdAtom);
