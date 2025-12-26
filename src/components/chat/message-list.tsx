@@ -86,7 +86,7 @@ export function MessageList() {
   const { messages, isLoading } = useMessages();
 
   return (
-    <ScrollArea className="flex-1">
+    <ScrollArea className="min-h-0 flex-1">
       <div className="mx-auto max-w-3xl">
         {messages.length === 0 && !isLoading ? (
           <div className="flex h-full items-center justify-center py-20">
