@@ -8,6 +8,9 @@ export interface ModelConfig {
   maxTokens?: number;
 }
 
+// MongoDB 모델에서 사용
+export type { ModelConfig as IModelConfig };
+
 // 프롬프트 레이어
 export interface PromptLayers {
   systemBase: string;

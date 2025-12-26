@@ -1,49 +1,31 @@
 import { NextRequest } from 'next/server';
 import { getAdapter } from '@/lib/providers';
-import { db } from '@/lib/db';
-import type { InternalMessage } from '@/types';
+import type { InternalMessage, ModelConfig } from '@/types';
 
 export const maxDuration = 60;
 
 interface ChatRequestBody {
-  projectId: string;
-  threadId: string;
   messages: InternalMessage[];
+  modelConfig: ModelConfig;
+  systemPrompt?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body: ChatRequestBody = await request.json();
-    const { projectId, messages } = body;
+    const { messages, modelConfig, systemPrompt }: ChatRequestBody = await request.json();
 
-    const project = await db.projects.get(projectId);
-    if (!project) {
-      return new Response(JSON.stringify({ error: 'Project not found' }), {
-        status: 404,
+    if (!modelConfig?.provider || !modelConfig?.modelName) {
+      return new Response(JSON.stringify({ error: 'modelConfig is required' }), {
+        status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
 
-    const promptVersion = project.currentPromptVersionId
-      ? await db.promptVersions.get(project.currentPromptVersionId)
-      : null;
-
-    const systemPrompt = promptVersion
-      ? [
-          promptVersion.layers.systemBase,
-          promptVersion.layers.persona,
-          promptVersion.layers.constraints,
-          promptVersion.layers.toolsPolicy,
-        ]
-          .filter(Boolean)
-          .join('\n\n')
-      : undefined;
-
-    const adapter = getAdapter(project.modelConfig.provider);
+    const adapter = getAdapter(modelConfig.provider);
 
     const stream = await adapter.chat({
       messages,
-      modelConfig: project.modelConfig,
+      modelConfig,
       systemPrompt,
     });
 
