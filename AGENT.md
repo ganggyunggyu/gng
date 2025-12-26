@@ -1,81 +1,72 @@
 # Gng - AI Chat Workbench
 
 ## 프로젝트 개요
-
-프로젝트 단위로 시스템 프롬프트/모델을 갈아끼우며 결과를 비교·회귀테스트까지 하는 AI Chat Workbench
+프로젝트 단위로 시스템 프롬프트/모델을 교체하며 결과를 비교하는 AI Chat Workbench.  
+Next.js App Router 기반이며 SSE 스트리밍을 통해 채팅 응답을 수신한다.
 
 ## 기술 스택
+- Next.js 16 (App Router)
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- Jotai (클라이언트 상태)
+- Dexie (IndexedDB)
+- Axios (서버-모델 통신)
+- Providers: OpenAI, Anthropic, Gemini, xAI, DeepSeek, Solar
 
-- **Framework**: Next.js 16 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS v4 + shadcn/ui
-- **State**: Jotai
-- **DB**: Dexie (IndexedDB)
-- **Providers**: OpenAI, Anthropic, xAI
-
-## 폴더 구조
-
+## 폴더 구조 (FSD)
 ```
 src/
-├── app/
-│   ├── api/
-│   │   ├── chat/route.ts      # SSE 스트리밍 채팅
-│   │   ├── projects/route.ts  # 프로젝트 CRUD
-│   │   └── threads/route.ts   # 스레드 CRUD
+├── app/                # 라우트, 레이아웃, API route
+│   ├── api/             # /api/* route handlers
 │   ├── layout.tsx
 │   ├── page.tsx
-│   └── globals.css
-├── components/
-│   ├── chat/                  # 채팅 UI
-│   ├── sidebar/               # 사이드바
-│   ├── settings/              # 설정 (예정)
-│   ├── ui/                    # shadcn/ui 컴포넌트
-│   └── providers.tsx          # Jotai + Tooltip Provider
-├── lib/
-│   ├── db/index.ts            # Dexie DB 설정
-│   ├── providers/             # AI Provider 어댑터
-│   │   ├── index.ts
-│   │   ├── types.ts
-│   │   ├── openai.ts
-│   │   ├── anthropic.ts
-│   │   └── xai.ts
-│   └── utils.ts               # cn() 유틸
-├── stores/index.ts            # Jotai atoms
-└── types/index.ts             # 타입 정의
+│   └── providers.tsx    # Jotai/Tooltip Provider
+├── entities/           # 도메인 모델 + API
+├── features/           # 기능 단위 UI/모델/훅
+└── shared/             # 공용 API, UI, lib, types
+    ├── api/             # provider adapter + callAI
+    ├── lib/             # cn 유틸
+    ├── ui/              # 공용 UI 컴포넌트
+    └── types/           # 공용 타입
 ```
 
-## 주요 명령어
+## 핵심 파일
+- `src/shared/api/call-ai.ts`: 통합 AI 호출 (비스트리밍/스트리밍)
+- `src/shared/api/*`: Provider adapter (openai/anthropic/gemini/xai/deepseek/solar)
+- `src/shared/lib/utils.ts`: `cn` 유틸
+- `src/app/api/chat/route.ts`: SSE 스트리밍 엔드포인트
+- `src/app/providers.tsx`: 전역 Provider 구성
 
+## 개발 명령어
 ```bash
-npm run dev      # 개발 서버
-npm run build    # 프로덕션 빌드
-npm run lint     # ESLint
+npm run dev
+npm run build
+npm run lint
 ```
 
-## 환경변수
-
-`.env.local` 파일에 API 키 설정 필요:
-
+## 환경 변수
+`.env.local`에 아래 키 설정:
 ```
 OPENAI_API_KEY=
 ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
 XAI_API_KEY=
+DEEPSEEK_API_KEY=
+SOLAR_API_KEY=
 ```
 
-## 개발 규칙
+## 코드 규칙 (프로젝트 기준)
+- `@/` 절대 경로 import 사용 (레이어 간 이동 시 상대 경로 금지).
+- `className`은 항상 `cn()` 사용.
+- React Fragment는 `React.Fragment`만 사용.
+- Jotai atom은 `src/shared` 또는 `features` 레이어에 배치.
+- SSE 스트리밍 형식은 `src/shared/api/types.ts` 규격 유지.
+- 신규 Provider 추가 시:
+  - `src/shared/api/`에 adapter 추가
+  - `src/shared/api/models.ts`에 모델/표시명/Provider 매핑 추가
+  - `src/shared/api/index.ts`에서 adapter 등록
 
-1. **서버 전용 키**: API 키는 절대 `NEXT_PUBLIC_` 접두사 사용 금지
-2. **ID 규칙**:
-   - Project: `prj_gng_...`
-   - Thread: `th_gng_...`
-   - Message: `msg_gng_...`
-3. **스트리밍**: Route Handler에서 SSE 스트림 반환
-
-## 다음 단계 (TODO)
-
-- [ ] 프로젝트 생성/삭제 UI
-- [ ] 스레드 생성/삭제 UI
-- [ ] 프롬프트 버전 관리 UI
-- [ ] Settings 패널 (모델 선택, 파라미터)
-- [ ] Eval (회귀 테스트) 기능
-- [ ] 다크 모드 토글
+## UI 규칙
+- 이모지 사용 지양, 아이콘은 `lucide-react` 사용.
+- Tailwind v4 유틸만 사용, 필요 시 `cn()`로 조건부 클래스 구성.
