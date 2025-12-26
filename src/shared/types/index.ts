@@ -84,12 +84,17 @@ export interface InternalMessage {
 }
 
 // 스트림 이벤트 타입
-export type StreamEventType = 'delta' | 'done' | 'error';
+export type StreamEventType = 'delta' | 'done' | 'error' | 'usage';
 
 // 내부 스트림 이벤트
 export interface InternalStreamEvent {
   type: StreamEventType;
-  data: string | { error: string };
+  data: string | { error: string } | TokenUsage;
+}
+
+export interface TokenUsage {
+  tokensIn: number;
+  tokensOut: number;
 }
 
 // Eval 관련 타입
