@@ -37,6 +37,10 @@ import {
 } from '@/stores';
 import { useProjects, useThreads } from '@/lib/hooks';
 import { cn } from '@/lib/utils';
+import { ModelSelector } from '@/components/settings/model-selector';
+import { ProjectSettings } from '@/components/settings/project-settings';
+import { Model } from '@/lib/providers';
+import type { Provider } from '@/types';
 
 export function Sidebar() {
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
@@ -48,7 +52,10 @@ export function Sidebar() {
   const { threads, createThread, deleteThread } = useThreads();
 
   const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O_API);
+  const [newProjectProvider, setNewProjectProvider] = useState<Provider>('openai');
   const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProjects = projects.filter((p) =>
@@ -57,23 +64,35 @@ export function Sidebar() {
 
   const handleCreateProject = async () => {
     if (!newProjectName.trim()) return;
-    await createProject(newProjectName.trim());
+    await createProject(newProjectName.trim(), {
+      provider: newProjectProvider,
+      modelName: newProjectModel,
+    });
     setNewProjectName('');
+    setNewProjectModel(Model.GPT4O_API);
+    setNewProjectProvider('openai');
     setProjectDialogOpen(false);
+  };
+
+  const handleModelChange = (model: string, provider: Provider) => {
+    setNewProjectModel(model);
+    setNewProjectProvider(provider);
   };
 
   const handleCreateThread = async () => {
     await createThread();
   };
 
-  if (!sidebarOpen) {
-    return null;
-  }
-
   return (
-    <aside className="flex h-full w-72 flex-col border-r bg-sidebar">
-      {/* Header */}
-      <div className="flex h-14 items-center justify-between border-b px-4">
+    <aside
+      className={cn(
+        'h-full border-r bg-sidebar transition-all duration-300 ease-in-out overflow-hidden',
+        sidebarOpen ? 'w-72' : 'w-0 border-r-0',
+      )}
+    >
+      <div className="flex h-full w-72 flex-col">
+        {/* Header */}
+        <div className="flex h-14 items-center justify-between border-b px-4">
         <h1 className="text-xl font-bold">Gng</h1>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
           <PanelLeftClose className="h-4 w-4" />
@@ -95,12 +114,22 @@ export function Sidebar() {
                 <DialogTitle>New Project</DialogTitle>
               </DialogHeader>
               <div className="flex flex-col gap-4 pt-4">
-                <Input
-                  placeholder="Project name"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
-                />
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Project Name</label>
+                  <Input
+                    placeholder="My awesome project"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Model</label>
+                  <ModelSelector
+                    value={newProjectModel}
+                    onChange={handleModelChange}
+                  />
+                </div>
                 <Button onClick={handleCreateProject} disabled={!newProjectName.trim()}>
                   Create Project
                 </Button>
@@ -241,13 +270,20 @@ export function Sidebar() {
 
           {/* Project Settings */}
           <div className="p-2">
-            <Button variant="ghost" className="w-full justify-start gap-2">
+            <Button
+              variant="ghost"
+              className="w-full justify-start gap-2"
+              onClick={() => setSettingsOpen(true)}
+            >
               <Settings className="h-4 w-4" />
               <span>Project Settings</span>
             </Button>
           </div>
+
+          <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
         </>
       )}
+      </div>
     </aside>
   );
 }
