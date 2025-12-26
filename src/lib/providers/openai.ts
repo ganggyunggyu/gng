@@ -2,6 +2,10 @@ import type { ProviderAdapter, ChatParams } from './types';
 import type { InternalStreamEvent } from '@/types';
 import { createSSEStream } from './types';
 
+// Reasoning 모델은 temperature 지원 안 함
+const isReasoningModel = (model: string) =>
+  model.startsWith('o1') || model.startsWith('o3') || model.startsWith('o4');
+
 export const openaiAdapter: ProviderAdapter = {
   name: 'openai',
 
@@ -15,6 +19,8 @@ export const openaiAdapter: ProviderAdapter = {
       ? [{ role: 'system' as const, content: systemPrompt }, ...messages]
       : messages;
 
+    const isReasoning = isReasoningModel(modelConfig.modelName);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -24,8 +30,8 @@ export const openaiAdapter: ProviderAdapter = {
       body: JSON.stringify({
         model: modelConfig.modelName,
         messages: formattedMessages,
-        temperature: modelConfig.temperature ?? 0.7,
-        max_tokens: modelConfig.maxTokens ?? 4096,
+        ...(isReasoning ? {} : { temperature: modelConfig.temperature ?? 0.7 }),
+        max_completion_tokens: modelConfig.maxTokens ?? 4096,
         stream: true,
       }),
       signal,
