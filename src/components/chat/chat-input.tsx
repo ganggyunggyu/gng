@@ -12,8 +12,6 @@ import {
   selectedProjectAtom,
 } from '@/stores';
 import { useMessages, useThreads } from '@/lib/hooks';
-import type { Message } from '@/types';
-import { createId } from '@/types';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
@@ -168,6 +166,7 @@ export function ChatInput() {
   }, [messages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.nativeEvent.isComposing) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
