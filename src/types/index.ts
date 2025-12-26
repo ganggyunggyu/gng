@@ -1,5 +1,5 @@
 // Provider 타입
-export type Provider = 'openai' | 'anthropic' | 'xai';
+export type Provider = 'openai' | 'anthropic' | 'gemini' | 'xai' | 'deepseek' | 'solar';
 
 export interface ModelConfig {
   provider: Provider;
