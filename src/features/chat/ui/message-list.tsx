@@ -1,19 +1,97 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { useAtomValue } from 'jotai';
 import { User, Bot, AlertCircle, Copy, Check } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/lib';
 import { isStreamingAtom, streamingContentAtom, useMessages } from '@/entities/message';
 import type { Message } from '@/shared/types';
-import { useState } from 'react';
 
 interface MessageItemProps {
   message: Message;
 }
+
+interface CodeBlockProps {
+  language: string;
+  children: string;
+}
+
+function CodeBlock({ language, children }: CodeBlockProps) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(children);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="group relative my-4">
+      <div className="flex items-center justify-between rounded-t-lg bg-zinc-800 px-4 py-2">
+        <span className="text-xs text-zinc-400">{language || 'code'}</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-6 w-6 text-zinc-400 hover:text-white"
+          onClick={handleCopy}
+        >
+          {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+        </Button>
+      </div>
+      <SyntaxHighlighter
+        style={oneDark}
+        language={language || 'text'}
+        PreTag="div"
+        customStyle={{
+          margin: 0,
+          borderTopLeftRadius: 0,
+          borderTopRightRadius: 0,
+          fontSize: '0.875rem',
+        }}
+      >
+        {children}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+const MarkdownContent = memo(function MarkdownContent({ content }: { content: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        code({ className, children, ...props }) {
+          const match = /language-(\w+)/.exec(className || '');
+          const isInline = !match && !className;
+
+          if (isInline) {
+            return (
+              <code className="rounded bg-muted px-1.5 py-0.5 text-sm" {...props}>
+                {children}
+              </code>
+            );
+          }
+
+          return (
+            <CodeBlock language={match?.[1] || ''}>
+              {String(children).replace(/\n$/, '')}
+            </CodeBlock>
+          );
+        },
+        pre({ children }) {
+          return <>{children}</>;
+        },
+      }}
+    >
+      {content}
+    </ReactMarkdown>
+  );
+});
 
 function MessageItem({ message }: MessageItemProps) {
   const [copied, setCopied] = useState(false);
@@ -69,7 +147,11 @@ function MessageItem({ message }: MessageItemProps) {
           </Button>
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <p className="whitespace-pre-wrap">{message.content}</p>
+          {isUser ? (
+            <p className="whitespace-pre-wrap">{message.content}</p>
+          ) : (
+            <MarkdownContent content={message.content} />
+          )}
         </div>
         {message.meta?.latencyMs && (
           <p className="text-xs text-muted-foreground">
@@ -96,10 +178,17 @@ function StreamingMessage() {
       <div className="flex-1 space-y-2">
         <span className="text-sm font-medium">Assistant</span>
         <div className="prose prose-sm dark:prose-invert max-w-none">
-          <p className="whitespace-pre-wrap">
-            {streamingContent || 'Thinking...'}
-            <span className="inline-block h-4 w-1 animate-pulse bg-foreground" />
-          </p>
+          {streamingContent ? (
+            <>
+              <MarkdownContent content={streamingContent} />
+              <span className="inline-block h-4 w-1 animate-pulse bg-foreground" />
+            </>
+          ) : (
+            <p className="text-muted-foreground">
+              Thinking...
+              <span className="ml-1 inline-block h-4 w-1 animate-pulse bg-foreground" />
+            </p>
+          )}
         </div>
       </div>
     </div>
