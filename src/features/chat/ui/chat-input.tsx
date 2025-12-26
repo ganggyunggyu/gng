@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Send, Square, RotateCcw, ImagePlus, X, Sparkles } from 'lucide-react';
+import axios from 'axios';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/shared/lib';
@@ -13,6 +14,7 @@ import {
 } from '@/entities/message';
 import { selectedThreadAtom, useThreads } from '@/entities/thread';
 import { selectedProjectAtom } from '@/entities/project';
+import { usePromptVersion } from '@/entities/prompt-version';
 import { isImageModeAtom } from '../model';
 import { useImageAttachment } from '../lib';
 
@@ -27,6 +29,7 @@ export function ChatInput() {
 
   const { messages, addMessage } = useMessages();
   const { updateThread } = useThreads();
+  const { getSystemPrompt } = usePromptVersion();
   const {
     images,
     isDragging,
@@ -59,18 +62,12 @@ export function ChatInput() {
     const startTime = Date.now();
 
     try {
-      const response = await fetch('/api/image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: input.trim() }),
-      });
+      const { data } = await axios.post<{ imageUrl: string; revisedPrompt?: string }>(
+        '/api/image',
+        { prompt: input.trim() },
+      );
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate image');
-      }
-
-      const { imageUrl, revisedPrompt } = await response.json();
+      const { imageUrl, revisedPrompt } = data;
 
       const content = `![Generated Image](${imageUrl})\n\n*${revisedPrompt || input.trim()}*`;
 
@@ -86,13 +83,14 @@ export function ChatInput() {
       });
     } catch (error) {
       console.error('Image generation error:', error);
+      const errorMessage = axios.isAxiosError(error)
+        ? error.response?.data?.error || error.message
+        : (error as Error).message;
       await addMessage({
         threadId: selectedThread.id,
         role: 'assistant',
-        content: `Error: ${(error as Error).message}`,
-        meta: {
-          error: (error as Error).message,
-        },
+        content: `Error: ${errorMessage}`,
+        meta: { error: errorMessage },
       });
     } finally {
       setIsStreaming(false);
@@ -138,6 +136,7 @@ export function ChatInput() {
             content: m.content,
           })),
           modelConfig: selectedProject.modelConfig,
+          systemPrompt: getSystemPrompt(),
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -232,6 +231,7 @@ export function ChatInput() {
     setIsStreaming,
     setStreamingContent,
     handleImageGenerate,
+    getSystemPrompt,
   ]);
 
   const handleStop = useCallback(() => {

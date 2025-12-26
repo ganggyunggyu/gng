@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
-import { getAdapter } from '@/lib/providers';
-import type { InternalMessage, ModelConfig } from '@/types';
+import { getAdapter } from '@/shared/api';
+import type { InternalMessage, ModelConfig } from '@/shared/types';
 
 export const maxDuration = 60;
 
