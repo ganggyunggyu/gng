@@ -1,0 +1,19 @@
+'use client';
+
+import { ChatHeader } from './chat-header';
+import { MessageList } from './message-list';
+import { ChatInput } from './chat-input';
+
+export function Chat() {
+  return (
+    <main className="flex h-full flex-1 flex-col">
+      <ChatHeader />
+      <MessageList />
+      <ChatInput />
+    </main>
+  );
+}
+
+export { ChatHeader } from './chat-header';
+export { MessageList } from './message-list';
+export { ChatInput } from './chat-input';
