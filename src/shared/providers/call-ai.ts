@@ -17,73 +17,83 @@ export interface CallAIResult {
   model: string;
 }
 
-/**
- * 통합 AI 호출 함수 (비스트리밍)
- *
- * @example
- * ```ts
- * import { callAI, Model } from '@/lib/providers';
- *
- * const result = await callAI({
- *   model: Model.GPT4O,
- *   messages: [{ role: 'user', content: '안녕!' }],
- *   systemPrompt: '친절한 어시스턴트',
- * });
- *
- * console.log(result.content);
- * ```
- */
-export async function callAI({
-  model,
-  messages,
-  systemPrompt,
-  temperature = 0.7,
-  maxTokens = 4096,
-  signal,
-}: CallAIParams): Promise<CallAIResult> {
+interface ParsedSSEEvent {
+  type: 'delta' | 'done' | 'error' | 'usage';
+  data?: string;
+  error?: string;
+}
+
+async function* parseSSEStream(
+  stream: ReadableStream<Uint8Array>,
+): AsyncGenerator<ParsedSSEEvent> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+
+        const data = line.slice(5).trim();
+        if (!data) continue;
+
+        try {
+          yield JSON.parse(data) as ParsedSSEEvent;
+        } catch {
+          // JSON 파싱 실패 시 무시
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+function createChatStream(params: CallAIParams) {
+  const {
+    model,
+    messages,
+    systemPrompt,
+    temperature = 0.7,
+    maxTokens = 4096,
+    signal,
+  } = params;
+
   const provider = getProviderFromModel(model);
   const adapter = getAdapter(provider);
 
-  const stream = await adapter.chat({
-    messages,
-    modelConfig: {
-      provider,
-      modelName: model,
-      temperature,
-      maxTokens,
-    },
-    systemPrompt,
-    signal,
-  });
+  return {
+    provider,
+    model,
+    stream: adapter.chat({
+      messages,
+      modelConfig: { provider, modelName: model, temperature, maxTokens },
+      systemPrompt,
+      signal,
+    }),
+  };
+}
 
-  // 스트림을 문자열로 수집
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
+/**
+ * 통합 AI 호출 함수 (비스트리밍)
+ */
+export async function callAI(params: CallAIParams): Promise<CallAIResult> {
+  const { provider, model, stream } = createChatStream(params);
   let content = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
-
-    for (const line of lines) {
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'delta' && typeof parsed.data === 'string') {
-          content += parsed.data;
-        } else if (parsed.type === 'error') {
-          throw new Error(parsed.data?.error || 'Unknown error');
-        }
-      } catch (e) {
-        if (e instanceof SyntaxError) continue;
-        throw e;
-      }
+  for await (const event of parseSSEStream(await stream)) {
+    if (event.type === 'delta' && event.data) {
+      content += event.data;
+    } else if (event.type === 'error') {
+      throw new Error(event.error ?? 'Unknown error');
     }
   }
 
@@ -92,70 +102,17 @@ export async function callAI({
 
 /**
  * 통합 AI 호출 함수 (스트리밍)
- *
- * @example
- * ```ts
- * import { callAIStream, Model } from '@/lib/providers';
- *
- * const stream = await callAIStream({
- *   model: Model.CLAUDE_SONNET_4_5,
- *   messages: [{ role: 'user', content: '안녕!' }],
- * });
- *
- * for await (const chunk of stream) {
- *   process.stdout.write(chunk);
- * }
- * ```
  */
-export async function* callAIStream({
-  model,
-  messages,
-  systemPrompt,
-  temperature = 0.7,
-  maxTokens = 4096,
-  signal,
-}: CallAIParams): AsyncGenerator<string> {
-  const provider = getProviderFromModel(model);
-  const adapter = getAdapter(provider);
+export async function* callAIStream(
+  params: CallAIParams,
+): AsyncGenerator<string> {
+  const { stream } = createChatStream(params);
 
-  const stream = await adapter.chat({
-    messages,
-    modelConfig: {
-      provider,
-      modelName: model,
-      temperature,
-      maxTokens,
-    },
-    systemPrompt,
-    signal,
-  });
-
-  const reader = stream.getReader();
-  const decoder = new TextDecoder();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const chunk = decoder.decode(value, { stream: true });
-    const lines = chunk.split('\n');
-
-    for (const line of lines) {
-      if (!line.startsWith('data:')) continue;
-      const data = line.slice(5).trim();
-      if (!data) continue;
-
-      try {
-        const parsed = JSON.parse(data);
-        if (parsed.type === 'delta' && typeof parsed.data === 'string') {
-          yield parsed.data;
-        } else if (parsed.type === 'error') {
-          throw new Error(parsed.data?.error || 'Unknown error');
-        }
-      } catch (e) {
-        if (e instanceof SyntaxError) continue; // Skip invalid JSON
-        throw e;
-      }
+  for await (const event of parseSSEStream(await stream)) {
+    if (event.type === 'delta' && event.data) {
+      yield event.data;
+    } else if (event.type === 'error') {
+      throw new Error(event.error ?? 'Unknown error');
     }
   }
 }

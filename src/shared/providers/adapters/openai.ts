@@ -25,7 +25,7 @@ export const openaiAdapter: ProviderAdapter = {
         model: modelConfig.modelName,
         messages: formattedMessages,
         temperature: modelConfig.temperature ?? 0.7,
-        max_tokens: modelConfig.maxTokens ?? 4096,
+        max_completion_tokens: modelConfig.maxTokens ?? 4096,
         stream: true,
       }),
       signal,

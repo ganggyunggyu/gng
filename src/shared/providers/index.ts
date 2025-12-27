@@ -30,7 +30,9 @@ export { type ProviderAdapter, type ChatParams } from './types';
 export {
   Model,
   MODELS_BY_PROVIDER,
+  MODEL_DISPLAY_NAMES,
   getProviderFromModel,
+  getModelDisplayName,
   type ModelName,
 } from './models';
 export { callAI, callAIStream, type CallAIParams, type CallAIResult } from './call-ai';

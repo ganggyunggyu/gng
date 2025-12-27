@@ -18,8 +18,7 @@ export const Model = {
 
   // Google Gemini
   GEMINI_3_PRO: 'gemini-3-pro-preview',
-  GEMINI_3_FLASH: 'gemini-3.0-flash',
-  GEMINI_3_FLASH_PREVIEW: 'gemini-3-flash-preview',
+  GEMINI_3_FLASH: 'gemini-3-flash-preview',
   GEMINI_2_FLASH: 'gemini-2.0-flash',
   IMAGEN_4: 'imagen-4.0-generate-001',
 
@@ -97,7 +96,6 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
   gemini: [
     Model.GEMINI_3_PRO,
     Model.GEMINI_3_FLASH,
-    Model.GEMINI_3_FLASH_PREVIEW,
     Model.GEMINI_2_FLASH,
   ],
   xai: [
@@ -139,7 +137,6 @@ export const MODEL_DISPLAY_NAMES: Record<string, string> = {
   // Gemini
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
   [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
-  [Model.GEMINI_3_FLASH_PREVIEW]: 'Gemini 3 Flash Preview',
   [Model.GEMINI_2_FLASH]: 'Gemini 2 Flash',
   [Model.IMAGEN_4]: 'Imagen 4',
   // xAI
