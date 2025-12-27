@@ -81,11 +81,11 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Project Settings</DialogTitle>
         </DialogHeader>
-        <Tabs defaultValue="general" className="mt-4">
+        <Tabs defaultValue="general" className="mt-4 flex-1 overflow-hidden flex flex-col">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="prompt">System Prompt</TabsTrigger>
@@ -127,14 +127,14 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
             </div>
           </TabsContent>
 
-          <TabsContent value="prompt" className="space-y-4 pt-4">
+          <TabsContent value="prompt" className="space-y-4 pt-4 flex-1 overflow-y-auto">
             <div className="space-y-2">
               <label className="text-sm font-medium">System Prompt</label>
               <Textarea
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 placeholder="You are a helpful assistant..."
-                className="min-h-[300px] font-mono text-sm"
+                className="min-h-[300px] max-h-[50vh] font-mono text-sm"
               />
             </div>
           </TabsContent>

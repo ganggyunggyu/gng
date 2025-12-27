@@ -15,7 +15,7 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { cn } from '@/shared/lib';
 import { selectedProjectAtom, useProjects } from '@/entities/project';
-import { MODELS_BY_PROVIDER } from '@/shared/api';
+import { MODELS_BY_PROVIDER } from '@/shared/providers';
 import type { Provider } from '@/shared/types';
 
 const PROVIDER_LABELS: Record<Provider, string> = {

@@ -13,7 +13,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { ChevronDown, Sparkles, Zap, Brain, Bot, Atom, Sun } from 'lucide-react';
-import { Model, MODELS_BY_PROVIDER, getProviderFromModel } from '@/shared/api';
+import { Model, MODELS_BY_PROVIDER, getProviderFromModel } from '@/shared/providers';
 import type { Provider } from '@/shared/types';
 
 interface ModelSelectorProps {
@@ -41,8 +41,7 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.CLAUDE_HAIKU_3_5]: 'Claude Haiku 3.5',
   [Model.CLAUDE_OPUS_3]: 'Claude Opus 3',
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
-  [Model.GEMINI_3_FLASH]: 'Gemini 3.0 Flash',
-  [Model.GEMINI_3_FLASH_PREVIEW]: 'Gemini 3 Flash Preview',
+  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
   [Model.GROK_4]: 'Grok-4',
   [Model.GROK_4_FAST]: 'Grok-4 Fast',
   [Model.GROK_4_RES]: 'Grok-4 Reasoning',

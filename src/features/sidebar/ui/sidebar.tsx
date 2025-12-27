@@ -30,7 +30,7 @@ import {
   DialogTrigger,
 } from '@/shared/ui/dialog';
 import { cn } from '@/shared/lib';
-import { Model } from '@/shared/api';
+import { Model } from '@/shared/providers';
 import type { Provider } from '@/shared/types';
 import {
   selectedProjectIdAtom,

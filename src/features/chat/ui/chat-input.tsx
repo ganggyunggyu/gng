@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { Send, Square, RotateCcw, ImagePlus, X, Sparkles } from 'lucide-react';
 import axios from 'axios';
@@ -26,6 +26,7 @@ export function ChatInput() {
   const selectedThread = useAtomValue(selectedThreadAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const { messages, addMessage } = useMessages();
   const { updateThread } = useThreads();
@@ -40,6 +41,12 @@ export function ChatInput() {
     handleDragLeave,
     handleDrop,
   } = useImageAttachment();
+
+  useEffect(() => {
+    if (!isStreaming && selectedThread) {
+      textareaRef.current?.focus();
+    }
+  }, [isStreaming, selectedThread]);
 
   const handleImageGenerate = useCallback(async () => {
     if (!input.trim() || isStreaming || !selectedThread) return;
@@ -246,14 +253,6 @@ export function ChatInput() {
     }
   }, [messages]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return;
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
   const canRetry = messages.length > 0 && messages[messages.length - 1]?.role === 'assistant';
 
   return (
@@ -324,9 +323,10 @@ export function ChatInput() {
             </Button>
 
             <Textarea
+              ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
+              onEnterSubmit={handleSubmit}
               placeholder={
                 !selectedThread
                   ? 'Select a project and thread to start'
