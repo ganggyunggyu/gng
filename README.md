@@ -5,6 +5,7 @@
 ## 주요 기능
 
 - **다중 AI Provider 지원**: OpenAI, Anthropic, Gemini, xAI, DeepSeek, Solar
+- **이미지 생성**: DALL-E 2/3, Imagen 3/4, Grok Image 지원
 - **프로젝트 기반 관리**: 프로젝트별로 시스템 프롬프트와 모델 설정
 - **SSE 스트리밍**: 실시간 응답 수신
 - **로컬 저장**: IndexedDB를 통한 대화 기록 저장
@@ -81,7 +82,7 @@ src/
 ├── app/                  # 라우트, 레이아웃, API route
 │   ├── api/
 │   │   ├── chat/         # SSE 스트리밍 엔드포인트
-│   │   └── image/        # 이미지 처리
+│   │   └── image/        # 이미지 생성 API
 │   ├── layout.tsx
 │   ├── page.tsx
 │   └── providers.tsx     # 전역 Provider 구성
@@ -98,9 +99,12 @@ src/
 │   └── sidebar/          # 사이드바 기능
 │
 └── shared/               # 공용 모듈
-    ├── api/              # Provider adapter, callAI
     ├── db/               # Dexie DB 설정
     ├── lib/              # 유틸리티 (cn 등)
+    ├── providers/        # AI Provider adapters
+    │   ├── adapters/     # Provider별 adapter 구현
+    │   ├── call-ai.ts    # 통합 AI 호출 함수
+    │   └── models.ts     # 모델/Provider 매핑
     ├── types/            # 공용 타입 정의
     └── ui/               # 공용 UI 컴포넌트
 ```
@@ -109,16 +113,37 @@ src/
 
 | 파일 | 설명 |
 |------|------|
-| `src/shared/api/call-ai.ts` | 통합 AI 호출 (비스트리밍/스트리밍) |
-| `src/shared/api/models.ts` | 모델/Provider 매핑 |
+| `src/shared/providers/call-ai.ts` | 통합 AI 호출 (스트리밍) |
+| `src/shared/providers/models.ts` | 모델/Provider/이미지모델 매핑 |
+| `src/shared/providers/adapters/` | Provider별 SSE 스트리밍 adapter |
 | `src/app/api/chat/route.ts` | SSE 스트리밍 API 엔드포인트 |
-| `src/app/providers.tsx` | Jotai/Tooltip Provider |
+| `src/app/api/image/route.ts` | 이미지 생성 API 엔드포인트 |
+
+## 이미지 모델 변경
+
+`src/shared/providers/models.ts`에서 `CURRENT_IMAGE_MODEL` 상수를 변경:
+
+```typescript
+// 사용 가능한 이미지 모델
+export const ImageModel = {
+  DALLE_3: 'dall-e-3',           // $0.040/장
+  DALLE_2: 'dall-e-2',           // $0.016~0.020/장
+  IMAGEN_3: 'imagen-3.0-generate-002',
+  IMAGEN_3_FAST: 'imagen-3.0-fast-generate-001',
+  IMAGEN_4: 'imagen-4.0-generate-001',
+  GROK_IMAGE: 'grok-2-image',    // ~$0.07/장
+} as const;
+
+// 현재 사용할 이미지 모델 (여기만 바꾸면 됨)
+export const CURRENT_IMAGE_MODEL = ImageModel.IMAGEN_4;
+```
 
 ## 새 Provider 추가
 
-1. `src/shared/api/`에 adapter 파일 생성
-2. `src/shared/api/models.ts`에 모델 정보 추가
-3. `src/shared/api/index.ts`에서 adapter 등록
+1. `src/shared/providers/adapters/`에 adapter 파일 생성
+2. `src/shared/providers/models.ts`에 모델 정보 추가
+3. `src/shared/providers/adapters/index.ts`에서 adapter export
+4. `src/shared/providers/index.ts`에서 adapter 등록
 
 ## 라이선스
 
