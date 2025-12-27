@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, memo } from 'react';
 import { useAtomValue } from 'jotai';
-import { User, Bot, AlertCircle, Copy, Check, Loader2 } from 'lucide-react';
+import { User, Bot, AlertCircle, Copy, Check, Loader2, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
@@ -12,7 +12,8 @@ import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
 import { cn } from '@/shared/lib';
-import { isStreamingAtom, streamingContentAtom, useMessages } from '@/entities/message';
+import { streamingStateByThreadAtom, useMessages } from '@/entities/message';
+import { selectedThreadIdAtom } from '@/entities/thread';
 import type { Message } from '@/shared/types';
 
 interface MessageItemProps {
@@ -191,6 +192,18 @@ function MessageItem({ message }: MessageItemProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownload = () => {
+    const blob = new Blob([message.content], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `message-${message.id.slice(0, 8)}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div
       className={cn(
@@ -220,18 +233,6 @@ function MessageItem({ message }: MessageItemProps) {
               Error
             </Badge>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 opacity-0 transition-opacity group-hover:opacity-100"
-            onClick={handleCopy}
-          >
-            {copied ? (
-              <Check className="h-3 w-3 text-green-500" />
-            ) : (
-              <Copy className="h-3 w-3" />
-            )}
-          </Button>
         </div>
         <div className="prose prose-sm dark:prose-invert max-w-none [counter-reset:list-counter]">
           {isUser ? (
@@ -239,6 +240,30 @@ function MessageItem({ message }: MessageItemProps) {
           ) : (
             <MarkdownContent content={message.content} />
           )}
+        </div>
+        <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+            onClick={handleCopy}
+          >
+            {copied ? (
+              <Check className="h-3 w-3 text-green-500" />
+            ) : (
+              <Copy className="h-3 w-3" />
+            )}
+            {copied ? 'Copied' : 'Copy'}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+            onClick={handleDownload}
+          >
+            <Download className="h-3 w-3" />
+            Download
+          </Button>
         </div>
         {message.meta?.latencyMs && (
           <p className="text-xs text-muted-foreground">
@@ -258,8 +283,12 @@ function ThinkingIndicator() {
 }
 
 function StreamingMessage() {
-  const isStreaming = useAtomValue(isStreamingAtom);
-  const streamingContent = useAtomValue(streamingContentAtom);
+  const selectedThreadId = useAtomValue(selectedThreadIdAtom);
+  const streamingState = useAtomValue(streamingStateByThreadAtom);
+
+  const currentState = selectedThreadId ? streamingState[selectedThreadId] : null;
+  const isStreaming = currentState?.isStreaming ?? false;
+  const streamingContent = currentState?.content ?? '';
 
   if (!isStreaming) return null;
 
@@ -293,11 +322,35 @@ function StreamingMessage() {
   );
 }
 
+function LoadingSkeleton() {
+  return (
+    <div className="animate-pulse space-y-6 py-6">
+      {[1, 2, 3].map((i) => (
+        <div key={i} className={cn('flex gap-3 px-4', i % 2 === 0 && 'bg-muted/30 py-6')}>
+          <div className="h-8 w-8 shrink-0 rounded-full bg-muted" />
+          <div className="flex-1 space-y-3">
+            <div className="h-4 w-20 rounded bg-muted" />
+            <div className="space-y-2">
+              <div className="h-3 w-full rounded bg-muted" />
+              <div className="h-3 w-4/5 rounded bg-muted" />
+              <div className="h-3 w-3/5 rounded bg-muted" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function MessageList() {
   const { messages, isLoading } = useMessages();
-  const isStreaming = useAtomValue(isStreamingAtom);
-  const streamingContent = useAtomValue(streamingContentAtom);
+  const selectedThreadId = useAtomValue(selectedThreadIdAtom);
+  const streamingState = useAtomValue(streamingStateByThreadAtom);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const currentState = selectedThreadId ? streamingState[selectedThreadId] : null;
+  const isStreaming = currentState?.isStreaming ?? false;
+  const streamingContent = currentState?.content ?? '';
 
   useEffect(() => {
     requestAnimationFrame(() => {
@@ -305,21 +358,58 @@ export function MessageList() {
     });
   }, [messages, streamingContent, isStreaming]);
 
-  return (
-    <ScrollArea className="min-h-0 flex-1">
-      <div className="mx-auto max-w-3xl pb-4">
-        {messages.length === 0 && !isLoading ? (
-          <div className="flex h-full items-center justify-center py-20">
-            <div className="text-center">
-              <h2 className="text-2xl font-semibold">Welcome to Gng</h2>
-              <p className="mt-2 text-muted-foreground">
-                Start a conversation or select a project
+  const renderContent = () => {
+    if (isLoading) {
+      return <LoadingSkeleton />;
+    }
+
+    if (messages.length === 0) {
+      return (
+        <div className="flex h-full items-center justify-center py-20">
+          <div className="flex flex-col items-center gap-8">
+            {/* Logo */}
+            <div className="relative">
+              <div className="absolute inset-0 animate-pulse rounded-full bg-foreground/5 blur-2xl" />
+              <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-foreground shadow-2xl">
+                <span className="text-3xl font-black text-background">G</span>
+              </div>
+            </div>
+
+            {/* Title */}
+            <div className="space-y-3 text-center">
+              <h1 className="text-4xl font-bold tracking-tight">
+                Welcome to Gng
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                What can I help you with today?
+              </p>
+            </div>
+
+            {/* Hint */}
+            <div className="flex flex-col items-center gap-2 text-sm text-muted-foreground">
+              <p>Create a project to get started</p>
+              <p className="flex items-center gap-2 text-xs text-muted-foreground/60">
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                  ⌘
+                </kbd>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                  P
+                </kbd>
+                <span>new project</span>
               </p>
             </div>
           </div>
-        ) : (
-          messages.map((message) => <MessageItem key={message.id} message={message} />)
-        )}
+        </div>
+      );
+    }
+
+    return messages.map((message) => <MessageItem key={message.id} message={message} />);
+  };
+
+  return (
+    <ScrollArea className="min-h-0 flex-1">
+      <div className="mx-auto max-w-3xl pb-4">
+        {renderContent()}
         <StreamingMessage />
         <div ref={bottomRef} />
       </div>

@@ -8,8 +8,8 @@ import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/shared/lib';
 import {
-  isStreamingAtom,
-  streamingContentAtom,
+  streamingStateByThreadAtom,
+  setStreamingStateAtom,
   useMessages,
 } from '@/entities/message';
 import { selectedThreadAtom, useThreads } from '@/entities/thread';
@@ -20,13 +20,15 @@ import { useImageAttachment } from '../lib';
 
 export function ChatInput() {
   const [input, setInput] = useState('');
-  const [isStreaming, setIsStreaming] = useAtom(isStreamingAtom);
   const [isImageMode, setIsImageMode] = useAtom(isImageModeAtom);
-  const setStreamingContent = useSetAtom(streamingContentAtom);
+  const streamingState = useAtomValue(streamingStateByThreadAtom);
+  const setStreamingState = useSetAtom(setStreamingStateAtom);
   const selectedThread = useAtomValue(selectedThreadAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const isStreaming = selectedThread ? streamingState[selectedThread.id]?.isStreaming ?? false : false;
 
   const { messages, addMessage } = useMessages();
   const { updateThread } = useThreads();
@@ -62,9 +64,9 @@ export function ChatInput() {
       await updateThread(selectedThread.id, { title });
     }
 
+    const threadId = selectedThread.id;
     setInput('');
-    setIsStreaming(true);
-    setStreamingContent('Generating image...');
+    setStreamingState({ threadId, isStreaming: true, content: 'Generating image...' });
 
     abortControllerRef.current = new AbortController();
     const startTime = Date.now();
@@ -81,7 +83,7 @@ export function ChatInput() {
       const content = `![Generated Image](${imageUrl})\n\n*${revisedPrompt || input.trim()}*`;
 
       await addMessage({
-        threadId: selectedThread.id,
+        threadId,
         role: 'assistant',
         content,
         meta: {
@@ -93,7 +95,7 @@ export function ChatInput() {
     } catch (error) {
       if (axios.isCancel(error)) {
         await addMessage({
-          threadId: selectedThread.id,
+          threadId,
           role: 'assistant',
           content: 'Image generation stopped by user.',
           meta: { error: 'Stopped by user' },
@@ -104,18 +106,17 @@ export function ChatInput() {
           ? error.response?.data?.error || error.message
           : (error as Error).message;
         await addMessage({
-          threadId: selectedThread.id,
+          threadId,
           role: 'assistant',
           content: `Error: ${errorMessage}`,
           meta: { error: errorMessage },
         });
       }
     } finally {
-      setIsStreaming(false);
-      setStreamingContent('');
+      setStreamingState({ threadId, isStreaming: false, content: '' });
       abortControllerRef.current = null;
     }
-  }, [input, isStreaming, selectedThread, messages, addMessage, updateThread, setIsStreaming, setStreamingContent]);
+  }, [input, isStreaming, selectedThread, messages, addMessage, updateThread, setStreamingState, getSystemPrompt]);
 
   const handleSubmit = useCallback(async () => {
     if (isImageMode) {
@@ -130,14 +131,15 @@ export function ChatInput() {
       content: input.trim(),
     });
 
+    const threadId = selectedThread.id;
+
     if (messages.length === 0) {
       const title = input.trim().slice(0, 30) + (input.trim().length > 30 ? '...' : '');
-      await updateThread(selectedThread.id, { title });
+      await updateThread(threadId, { title });
     }
 
     setInput('');
-    setIsStreaming(true);
-    setStreamingContent('');
+    setStreamingState({ threadId, isStreaming: true, content: '' });
 
     abortControllerRef.current = new AbortController();
 
@@ -186,7 +188,7 @@ export function ChatInput() {
             const event = JSON.parse(data);
             if (event.type === 'delta') {
               content += event.data;
-              setStreamingContent(content);
+              setStreamingState({ threadId, content });
             } else if (event.type === 'error') {
               throw new Error(event.data.error);
             }
@@ -198,7 +200,7 @@ export function ChatInput() {
       }
 
       await addMessage({
-        threadId: selectedThread.id,
+        threadId,
         role: 'assistant',
         content,
         meta: {
@@ -211,7 +213,7 @@ export function ChatInput() {
       if ((error as Error).name === 'AbortError') {
         if (content) {
           await addMessage({
-            threadId: selectedThread.id,
+            threadId,
             role: 'assistant',
             content,
             meta: {
@@ -225,7 +227,7 @@ export function ChatInput() {
       } else {
         console.error('Chat error:', error);
         await addMessage({
-          threadId: selectedThread.id,
+          threadId,
           role: 'assistant',
           content: `Error: ${(error as Error).message}`,
           meta: {
@@ -234,8 +236,7 @@ export function ChatInput() {
         });
       }
     } finally {
-      setIsStreaming(false);
-      setStreamingContent('');
+      setStreamingState({ threadId, isStreaming: false, content: '' });
       abortControllerRef.current = null;
     }
   }, [
@@ -247,8 +248,7 @@ export function ChatInput() {
     messages,
     addMessage,
     updateThread,
-    setIsStreaming,
-    setStreamingContent,
+    setStreamingState,
     handleImageGenerate,
     getSystemPrompt,
   ]);

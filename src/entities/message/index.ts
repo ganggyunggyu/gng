@@ -1,2 +1,8 @@
-export { messagesAtom, isStreamingAtom, streamingContentAtom } from './model';
+export {
+  messagesAtom,
+  streamingStateByThreadAtom,
+  setStreamingStateAtom,
+  type StreamingState,
+  type StreamingStateUpdate,
+} from './model';
 export { useMessages } from './api';
