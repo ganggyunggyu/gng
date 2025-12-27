@@ -66,12 +66,14 @@ export function ChatInput() {
     setIsStreaming(true);
     setStreamingContent('Generating image...');
 
+    abortControllerRef.current = new AbortController();
     const startTime = Date.now();
 
     try {
       const { data } = await axios.post<{ imageUrl: string; revisedPrompt?: string }>(
         '/api/image',
-        { prompt: input.trim() },
+        { prompt: input.trim(), systemPrompt: getSystemPrompt() },
+        { signal: abortControllerRef.current.signal },
       );
 
       const { imageUrl, revisedPrompt } = data;
@@ -89,19 +91,29 @@ export function ChatInput() {
         },
       });
     } catch (error) {
-      console.error('Image generation error:', error);
-      const errorMessage = axios.isAxiosError(error)
-        ? error.response?.data?.error || error.message
-        : (error as Error).message;
-      await addMessage({
-        threadId: selectedThread.id,
-        role: 'assistant',
-        content: `Error: ${errorMessage}`,
-        meta: { error: errorMessage },
-      });
+      if (axios.isCancel(error)) {
+        await addMessage({
+          threadId: selectedThread.id,
+          role: 'assistant',
+          content: 'Image generation stopped by user.',
+          meta: { error: 'Stopped by user' },
+        });
+      } else {
+        console.error('Image generation error:', error);
+        const errorMessage = axios.isAxiosError(error)
+          ? error.response?.data?.error || error.message
+          : (error as Error).message;
+        await addMessage({
+          threadId: selectedThread.id,
+          role: 'assistant',
+          content: `Error: ${errorMessage}`,
+          meta: { error: errorMessage },
+        });
+      }
     } finally {
       setIsStreaming(false);
       setStreamingContent('');
+      abortControllerRef.current = null;
     }
   }, [input, isStreaming, selectedThread, messages, addMessage, updateThread, setIsStreaming, setStreamingContent]);
 
