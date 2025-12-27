@@ -7,10 +7,12 @@ import {
   Settings,
   MessageSquare,
   FolderOpen,
+  FolderClosed,
   Search,
   PanelLeftClose,
   Trash2,
   MoreHorizontal,
+  ChevronRight,
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
@@ -117,7 +119,13 @@ export function Sidebar() {
                     placeholder="My awesome project"
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleCreateProject()}
+                    onKeyDown={(e) => {
+                      if (e.nativeEvent.isComposing) return;
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateProject();
+                      }
+                    }}
                   />
                 </div>
                 <div className="space-y-2">
@@ -146,137 +154,144 @@ export function Sidebar() {
       </div>
 
       <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1">
+        <div className="space-y-1 pb-4">
           {filteredProjects.length === 0 ? (
             <p className="px-2 py-4 text-center text-sm text-muted-foreground">
               {projects.length === 0 ? 'No projects yet' : 'No matching projects'}
             </p>
           ) : (
-            filteredProjects.map((project) => (
-              <div
-                key={project.id}
-                className={cn(
-                  'group flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
-                  selectedProjectId === project.id && 'bg-sidebar-accent',
-                )}
-              >
-                <button
-                  onClick={() => setSelectedProjectId(project.id)}
-                  className="flex flex-1 items-center gap-2 text-sm"
-                >
-                  <FolderOpen className="h-4 w-4" />
-                  <span className="truncate">{project.name}</span>
-                </button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 opacity-0 group-hover:opacity-100"
+            filteredProjects.map((project) => {
+              const isSelected = selectedProjectId === project.id;
+              return (
+                <div key={project.id} className="space-y-0.5">
+                  {/* Project Item */}
+                  <div
+                    className={cn(
+                      'group flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
+                      isSelected && 'bg-sidebar-accent',
+                    )}
+                  >
+                    <button
+                      onClick={() => setSelectedProjectId(isSelected ? null : project.id)}
+                      className="flex flex-1 items-center gap-2 text-sm font-medium"
                     >
-                      <MoreHorizontal className="h-3 w-3" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      className="text-destructive"
-                      onClick={() => deleteProject(project.id)}
-                    >
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))
+                      <ChevronRight
+                        className={cn(
+                          'h-3 w-3 text-muted-foreground transition-transform duration-200',
+                          isSelected && 'rotate-90',
+                        )}
+                      />
+                      {isSelected ? (
+                        <FolderOpen className="h-4 w-4 text-primary" />
+                      ) : (
+                        <FolderClosed className="h-4 w-4" />
+                      )}
+                      <span className="truncate">{project.name}</span>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {isSelected && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCreateThread();
+                          }}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                          >
+                            <MoreHorizontal className="h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {isSelected && (
+                            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                              <Settings className="mr-2 h-4 w-4" />
+                              Settings
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => deleteProject(project.id)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+
+                  {/* Threads (Accordion Content) */}
+                  <div
+                    className={cn(
+                      'overflow-hidden transition-all duration-200 ease-in-out',
+                      isSelected ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0',
+                    )}
+                  >
+                    <div className="ml-4 space-y-0.5 border-l border-border pl-2">
+                      {threads.length === 0 ? (
+                        <p className="py-2 text-xs text-muted-foreground">
+                          No chats yet
+                        </p>
+                      ) : (
+                        threads.map((thread) => (
+                          <div
+                            key={thread.id}
+                            className={cn(
+                              'group flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
+                              selectedThreadId === thread.id && 'bg-sidebar-accent',
+                            )}
+                          >
+                            <button
+                              onClick={() => setSelectedThreadId(thread.id)}
+                              className="flex flex-1 items-center gap-2 text-sm"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              <span className="truncate">{thread.title}</span>
+                            </button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 opacity-0 group-hover:opacity-100"
+                                >
+                                  <MoreHorizontal className="h-3 w-3" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => deleteThread(thread.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       </ScrollArea>
 
-      <Separator />
-
-      {selectedProject && (
-        <>
-          <div className="flex flex-col gap-2 p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                {selectedProject.name}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleCreateThread}
-              >
-                <Plus className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-
-          <ScrollArea className="flex-1 px-2">
-            <div className="space-y-1">
-              {threads.length === 0 ? (
-                <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-                  No chats yet
-                </p>
-              ) : (
-                threads.map((thread) => (
-                  <div
-                    key={thread.id}
-                    className={cn(
-                      'group flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
-                      selectedThreadId === thread.id && 'bg-sidebar-accent',
-                    )}
-                  >
-                    <button
-                      onClick={() => setSelectedThreadId(thread.id)}
-                      className="flex flex-1 items-center gap-2 text-sm"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="truncate">{thread.title}</span>
-                    </button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                        >
-                          <MoreHorizontal className="h-3 w-3" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => deleteThread(thread.id)}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-
-          <Separator />
-
-          <div className="p-2">
-            <Button
-              variant="ghost"
-              className="w-full justify-start gap-2"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <Settings className="h-4 w-4" />
-              <span>Project Settings</span>
-            </Button>
-          </div>
-
-          <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
-        </>
-      )}
+      <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     </aside>
   );
