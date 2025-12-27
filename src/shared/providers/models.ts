@@ -62,21 +62,15 @@ export const IMAGE_MODEL_CONFIG: Record<
 // AI 모델 상수 정의
 // ============================================================
 export const Model = {
-  // OpenAI GPT-5 시리즈 (Response API)
-  GPT5: 'gpt-5-2025-08-07',
-  GPT5_1: 'gpt-5.1-2025-11-13',
-  GPT5_2: 'gpt-5.2-2025-12-11',
-  GPT5_MINI: 'gpt-5-mini-2025-08-07',
-  GPT5_NANO: 'gpt-5-nano-2025-08-07',
+  // OpenAI GPT-4.1 시리즈 (2025-04-14)
+  GPT4_1: 'gpt-4.1-2025-04-14',
+  GPT4_1_MINI: 'gpt-4.1-mini-2025-04-14',
+  GPT4_1_NANO: 'gpt-4.1-nano-2025-04-14',
 
-  // OpenAI Chat Completion 시리즈
+  // OpenAI GPT-4o 시리즈
   GPT4O: 'chatgpt-4o-latest',
   GPT4O_API: 'gpt-4o',
   GPT4O_MINI: 'gpt-4o-mini',
-  GPT4_1: 'gpt-4.1-2025-04-14',
-  GPT4_1_MINI: 'gpt-4.1-mini-2025-04-14',
-  GPT4_TURBO: 'gpt-4-turbo',
-  GPT5_CHAT: 'gpt-5-chat-latest',
 
   // Google Gemini
   GEMINI_3_PRO: 'gemini-3-pro-preview',
@@ -136,18 +130,12 @@ export function getProviderFromModel(model: string): Provider {
 // Provider별 모델 목록
 export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
   openai: [
-    Model.GPT5,
-    Model.GPT5_1,
-    Model.GPT5_2,
-    Model.GPT5_MINI,
-    Model.GPT5_NANO,
-    Model.GPT5_CHAT,
+    Model.GPT4_1,
+    Model.GPT4_1_MINI,
+    Model.GPT4_1_NANO,
     Model.GPT4O,
     Model.GPT4O_API,
     Model.GPT4O_MINI,
-    Model.GPT4_1,
-    Model.GPT4_1_MINI,
-    Model.GPT4_TURBO,
   ],
   anthropic: [
     Model.CLAUDE_SONNET_4_5,
@@ -168,25 +156,19 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
     Model.GROK_IMAGE,
   ],
   deepseek: [Model.DEEPSEEK_CHAT, Model.DEEPSEEK_RES],
-  solar: [Model.SOLAR_PRO, Model.SOLAR_PRO2],
+  solar: [], // 크레딧 부족으로 비활성화
 };
 
 // 모델 표시명 (UI용)
 export const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  // OpenAI GPT-5
-  [Model.GPT5]: 'GPT-5',
-  [Model.GPT5_1]: 'GPT-5.1',
-  [Model.GPT5_2]: 'GPT-5.2',
-  [Model.GPT5_MINI]: 'GPT-5 Mini',
-  [Model.GPT5_NANO]: 'GPT-5 Nano',
-  [Model.GPT5_CHAT]: 'GPT-5 Chat',
-  // OpenAI GPT-4
+  // OpenAI GPT-4.1
+  [Model.GPT4_1]: 'GPT-4.1',
+  [Model.GPT4_1_MINI]: 'GPT-4.1 Mini',
+  [Model.GPT4_1_NANO]: 'GPT-4.1 Nano',
+  // OpenAI GPT-4o
   [Model.GPT4O]: 'GPT-4o (Latest)',
   [Model.GPT4O_API]: 'GPT-4o',
   [Model.GPT4O_MINI]: 'GPT-4o Mini',
-  [Model.GPT4_1]: 'GPT-4.1',
-  [Model.GPT4_1_MINI]: 'GPT-4.1 Mini',
-  [Model.GPT4_TURBO]: 'GPT-4 Turbo',
   // Claude
   [Model.CLAUDE_SONNET_4_5]: 'Claude Sonnet 4.5',
   [Model.CLAUDE_OPUS_4_5]: 'Claude Opus 4.5',
