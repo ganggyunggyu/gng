@@ -27,7 +27,7 @@ export const anthropicAdapter: ProviderAdapter = {
         model: modelConfig.modelName,
         system: systemPrompt,
         messages: formattedMessages,
-        max_tokens: modelConfig.maxTokens ?? 4096,
+        max_tokens: modelConfig.maxTokens ?? 16384,
         stream: true,
       }),
       signal,

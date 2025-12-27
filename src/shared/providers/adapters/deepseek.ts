@@ -25,7 +25,7 @@ export const deepseekAdapter: ProviderAdapter = {
         model: modelConfig.modelName,
         messages: formattedMessages,
         temperature: modelConfig.temperature ?? 0.7,
-        max_tokens: modelConfig.maxTokens ?? 4096,
+        ...(modelConfig.maxTokens && { max_tokens: modelConfig.maxTokens }),
         stream: true,
       }),
       signal,

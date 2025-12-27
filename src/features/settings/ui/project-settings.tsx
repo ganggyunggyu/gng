@@ -31,7 +31,7 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
   const [model, setModel] = useState('');
   const [provider, setProvider] = useState<Provider>('openai');
   const [temperature, setTemperature] = useState(0.7);
-  const [maxTokens, setMaxTokens] = useState(4096);
+  const [maxTokens, setMaxTokens] = useState<number | undefined>(undefined);
   const [systemPrompt, setSystemPrompt] = useState('');
 
   useEffect(() => {
@@ -40,7 +40,7 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
       setModel(selectedProject.modelConfig.modelName);
       setProvider(selectedProject.modelConfig.provider);
       setTemperature(selectedProject.modelConfig.temperature ?? 0.7);
-      setMaxTokens(selectedProject.modelConfig.maxTokens ?? 4096);
+      setMaxTokens(selectedProject.modelConfig.maxTokens);
     }
   }, [selectedProject]);
 
@@ -115,13 +115,14 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Max Tokens</label>
+                <label className="text-sm font-medium">Max Tokens (비우면 무제한)</label>
                 <Input
                   type="number"
                   min={1}
                   max={128000}
-                  value={maxTokens}
-                  onChange={(e) => setMaxTokens(parseInt(e.target.value))}
+                  value={maxTokens ?? ''}
+                  placeholder="Unlimited"
+                  onChange={(e) => setMaxTokens(e.target.value ? parseInt(e.target.value) : undefined)}
                 />
               </div>
             </div>

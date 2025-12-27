@@ -42,7 +42,7 @@ export function useProjects() {
           provider: modelConfig?.provider ?? 'openai',
           modelName: modelConfig?.modelName ?? 'gpt-4o',
           temperature: modelConfig?.temperature ?? 0.7,
-          maxTokens: modelConfig?.maxTokens ?? 4096,
+          maxTokens: modelConfig?.maxTokens,
         },
         createdAt: new Date(),
         updatedAt: new Date(),

@@ -63,7 +63,7 @@ function createChatStream(params: CallAIParams) {
     messages,
     systemPrompt,
     temperature = 0.7,
-    maxTokens = 4096,
+    maxTokens,
     signal,
   } = params;
 

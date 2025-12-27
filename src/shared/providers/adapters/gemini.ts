@@ -28,7 +28,7 @@ export const geminiAdapter: ProviderAdapter = {
           systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
           generationConfig: {
             temperature: modelConfig.temperature ?? 0.7,
-            maxOutputTokens: modelConfig.maxTokens ?? 4096,
+            ...(modelConfig.maxTokens && { maxOutputTokens: modelConfig.maxTokens }),
           },
         }),
         signal,
