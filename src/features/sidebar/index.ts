@@ -1,2 +1,7 @@
 export * from './ui';
-export { sidebarOpenAtom } from './model';
+export {
+  sidebarOpenAtom,
+  projectDialogOpenAtom,
+  settingsDialogOpenAtom,
+  searchFocusAtom,
+} from './model';

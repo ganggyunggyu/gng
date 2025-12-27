@@ -167,13 +167,13 @@ export function Sidebar() {
                   {/* Project Item */}
                   <div
                     className={cn(
-                      'group flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
+                      'group/project flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
                       isSelected && 'bg-sidebar-accent',
                     )}
                   >
                     <button
                       onClick={() => setSelectedProjectId(isSelected ? null : project.id)}
-                      className="flex flex-1 items-center gap-2 text-sm font-medium"
+                      className="flex flex-1 min-w-0 items-center gap-2 text-sm font-medium"
                     >
                       <ChevronRight
                         className={cn(
@@ -188,7 +188,7 @@ export function Sidebar() {
                       )}
                       <span className="truncate">{project.name}</span>
                     </button>
-                    <div className="flex items-center gap-1">
+                    <div className="flex shrink-0 items-center gap-1">
                       {isSelected && (
                         <Button
                           variant="ghost"
@@ -207,7 +207,7 @@ export function Sidebar() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                            className="h-6 w-6 opacity-0 group-hover/project:opacity-100"
                           >
                             <MoreHorizontal className="h-3 w-3" />
                           </Button>
@@ -248,13 +248,13 @@ export function Sidebar() {
                           <div
                             key={thread.id}
                             className={cn(
-                              'group flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
+                              'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
                               selectedThreadId === thread.id && 'bg-sidebar-accent',
                             )}
                           >
                             <button
                               onClick={() => setSelectedThreadId(thread.id)}
-                              className="flex flex-1 items-center gap-2 text-sm"
+                              className="flex flex-1 min-w-0 items-center gap-2 text-sm"
                             >
                               <MessageSquare className="h-3.5 w-3.5" />
                               <span className="truncate">{thread.title}</span>
@@ -264,7 +264,7 @@ export function Sidebar() {
                                 <Button
                                   variant="ghost"
                                   size="icon"
-                                  className="h-5 w-5 opacity-0 group-hover:opacity-100"
+                                  className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
                                 >
                                   <MoreHorizontal className="h-3 w-3" />
                                 </Button>
