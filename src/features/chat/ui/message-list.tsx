@@ -5,6 +5,7 @@ import { useAtomValue } from 'jotai';
 import { User, Bot, AlertCircle, Copy, Check, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import remarkBreaks from 'remark-breaks';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScrollArea } from '@/shared/ui/scroll-area';
@@ -65,7 +66,7 @@ function CodeBlock({ language, children }: CodeBlockProps) {
 const MarkdownContent = memo(function MarkdownContent({ content }: { content: string }) {
   return (
     <ReactMarkdown
-      remarkPlugins={[remarkGfm]}
+      remarkPlugins={[remarkGfm, remarkBreaks]}
       components={{
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');
@@ -100,6 +101,17 @@ const MarkdownContent = memo(function MarkdownContent({ content }: { content: st
             </a>
           );
         },
+        img({ src, alt }) {
+          if (!src) return null;
+          return (
+            <img
+              src={src}
+              alt={alt || ''}
+              className="my-4 max-w-full rounded-lg"
+              loading="lazy"
+            />
+          );
+        },
         table({ children }) {
           return (
             <div className="my-4 overflow-x-auto rounded-lg border">
@@ -128,7 +140,11 @@ const MarkdownContent = memo(function MarkdownContent({ content }: { content: st
           return <ul className="my-2 ml-4 list-disc space-y-1">{children}</ul>;
         },
         ol({ children }) {
-          return <ol className="my-2 ml-4 list-decimal space-y-1">{children}</ol>;
+          return (
+            <ol className="my-2 ml-6 space-y-1 list-none [&>li]:before:content-[counter(list-counter)'.'] [&>li]:before:mr-2 [&>li]:before:font-medium [&>li]:[counter-increment:list-counter]">
+              {children}
+            </ol>
+          );
         },
         hr() {
           return <hr className="my-6 border-border" />;
@@ -217,7 +233,7 @@ function MessageItem({ message }: MessageItemProps) {
             )}
           </Button>
         </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm dark:prose-invert max-w-none [counter-reset:list-counter]">
           {isUser ? (
             <p className="whitespace-pre-wrap">{message.content}</p>
           ) : (
@@ -262,7 +278,7 @@ function StreamingMessage() {
             </Badge>
           )}
         </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm dark:prose-invert max-w-none [counter-reset:list-counter]">
           {streamingContent ? (
             <>
               <MarkdownContent content={streamingContent} />
