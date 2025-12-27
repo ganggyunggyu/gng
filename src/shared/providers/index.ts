@@ -33,6 +33,9 @@ export {
   MODEL_DISPLAY_NAMES,
   getProviderFromModel,
   getModelDisplayName,
+  ImageModel,
+  CURRENT_IMAGE_MODEL,
+  IMAGE_MODEL_CONFIG,
   type ModelName,
 } from './models';
 export { callAI, callAIStream, type CallAIParams, type CallAIResult } from './call-ai';

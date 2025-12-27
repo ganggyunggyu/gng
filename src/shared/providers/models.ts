@@ -1,4 +1,66 @@
+// ============================================================
+// 이미지 생성 모델 (테스트용 - 여기서 바꿔서 사용)
+// ============================================================
+export const ImageModel = {
+  // OpenAI DALL-E
+  DALLE_3: 'dall-e-3', // $0.040/장 (1024x1024 standard)
+  DALLE_2: 'dall-e-2', // $0.016/장 (256x256) ~ $0.020/장 (1024x1024) 저렴!
+
+  // Google Imagen ($0.03/장)
+  IMAGEN_3: 'imagen-3.0-generate-002', // 고품질
+  IMAGEN_3_FAST: 'imagen-3.0-fast-generate-001', // 빠름
+  IMAGEN_4: 'imagen-4.0-generate-001', // 최신, 최고품질
+
+  // xAI Grok
+  GROK_IMAGE: 'grok-2-image', // ~$0.07/장
+} as const;
+
+// 🔧 현재 사용할 이미지 모델 (여기만 바꾸면 됨!)
+export const CURRENT_IMAGE_MODEL = ImageModel.IMAGEN_4;
+
+// 이미지 모델별 설정
+export const IMAGE_MODEL_CONFIG: Record<
+  string,
+  { provider: 'openai' | 'gemini' | 'xai'; endpoint: string; apiKeyEnv: string }
+> = {
+  [ImageModel.DALLE_3]: {
+    provider: 'openai',
+    endpoint: 'https://api.openai.com/v1/images/generations',
+    apiKeyEnv: 'OPENAI_API_KEY',
+  },
+  [ImageModel.DALLE_2]: {
+    provider: 'openai',
+    endpoint: 'https://api.openai.com/v1/images/generations',
+    apiKeyEnv: 'OPENAI_API_KEY',
+  },
+  [ImageModel.IMAGEN_3]: {
+    provider: 'gemini',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict',
+    apiKeyEnv: 'GEMINI_API_KEY',
+  },
+  [ImageModel.IMAGEN_3_FAST]: {
+    provider: 'gemini',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-fast-generate-001:predict',
+    apiKeyEnv: 'GEMINI_API_KEY',
+  },
+  [ImageModel.IMAGEN_4]: {
+    provider: 'gemini',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/imagen-4.0-generate-001:predict',
+    apiKeyEnv: 'GEMINI_API_KEY',
+  },
+  [ImageModel.GROK_IMAGE]: {
+    provider: 'xai',
+    endpoint: 'https://api.x.ai/v1/images/generations',
+    apiKeyEnv: 'XAI_API_KEY',
+  },
+};
+
+// ============================================================
 // AI 모델 상수 정의
+// ============================================================
 export const Model = {
   // OpenAI GPT-5 시리즈 (Response API)
   GPT5: 'gpt-5-2025-08-07',
@@ -63,7 +125,8 @@ export type Provider =
 export function getProviderFromModel(model: string): Provider {
   if (model.startsWith('gpt-') || model.startsWith('chatgpt-')) return 'openai';
   if (model.startsWith('claude-')) return 'anthropic';
-  if (model.startsWith('gemini-') || model.startsWith('imagen-')) return 'gemini';
+  if (model.startsWith('gemini-') || model.startsWith('imagen-'))
+    return 'gemini';
   if (model.startsWith('grok-')) return 'xai';
   if (model.startsWith('deepseek-')) return 'deepseek';
   if (model.startsWith('solar-')) return 'solar';
@@ -93,11 +156,7 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
     Model.CLAUDE_HAIKU_3_5,
     Model.CLAUDE_OPUS_3,
   ],
-  gemini: [
-    Model.GEMINI_3_PRO,
-    Model.GEMINI_3_FLASH,
-    Model.GEMINI_2_FLASH,
-  ],
+  gemini: [Model.GEMINI_3_PRO, Model.GEMINI_3_FLASH, Model.GEMINI_2_FLASH],
   xai: [
     Model.GROK_4,
     Model.GROK_4_FAST,
