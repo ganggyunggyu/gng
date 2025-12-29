@@ -122,4 +122,19 @@
   body {
     @apply bg-background text-foreground;
   }
+  /* iOS Safari overscroll bounce 방지 */
+  html,
+  body {
+    overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+  }
+  @supports (-webkit-touch-callout: none) {
+    /* iOS Safari 전용 */
+    html {
+      height: -webkit-fill-available;
+    }
+    body {
+      min-height: -webkit-fill-available;
+    }
+  }
 }
