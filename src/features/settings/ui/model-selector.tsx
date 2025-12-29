@@ -32,28 +32,36 @@ const PROVIDER_INFO: Record<Provider, { label: string; icon: typeof Sparkles; co
 };
 
 const MODEL_DISPLAY_NAMES: Record<string, string> = {
-  [Model.GPT4O]: 'GPT-4o',
+  // OpenAI GPT-4.1
+  [Model.GPT4_1]: 'GPT-4.1',
+  [Model.GPT4_1_MINI]: 'GPT-4.1 Mini',
+  [Model.GPT4_1_NANO]: 'GPT-4.1 Nano',
+  // OpenAI GPT-4o
+  [Model.GPT4O]: 'GPT-4o (Latest)',
+  [Model.GPT4O_API]: 'GPT-4o',
   [Model.GPT4O_MINI]: 'GPT-4o Mini',
-  [Model.GPT4_TURBO]: 'GPT-4 Turbo',
+  // Anthropic Claude
   [Model.CLAUDE_SONNET_4_5]: 'Claude Sonnet 4.5',
   [Model.CLAUDE_OPUS_4_5]: 'Claude Opus 4.5',
   [Model.CLAUDE_SONNET_3_5]: 'Claude Sonnet 3.5',
   [Model.CLAUDE_HAIKU_3_5]: 'Claude Haiku 3.5',
   [Model.CLAUDE_OPUS_3]: 'Claude Opus 3',
+  // Google Gemini
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
   [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
-  [Model.GROK_4]: 'Grok-4',
-  [Model.GROK_4_FAST]: 'Grok-4 Fast',
-  [Model.GROK_4_RES]: 'Grok-4 Reasoning',
-  [Model.GROK_4_NON_RES]: 'Grok-4 Non-Reasoning',
-  [Model.GROK_4_1_RES]: 'Grok-4.1 Reasoning',
-  [Model.GROK_4_1_NON_RES]: 'Grok-4.1 Non-Reasoning',
+  [Model.GEMINI_2_FLASH]: 'Gemini 2 Flash',
+  // xAI Grok
+  [Model.GROK_4]: 'Grok 4',
+  [Model.GROK_4_FAST]: 'Grok 4 Fast',
+  [Model.GROK_4_RES]: 'Grok 4 Reasoning',
+  [Model.GROK_4_NON_RES]: 'Grok 4 Non-Reasoning',
+  [Model.GROK_4_1_RES]: 'Grok 4.1 Reasoning',
+  [Model.GROK_4_1_NON_RES]: 'Grok 4.1 Non-Reasoning',
   [Model.GROK_CODE]: 'Grok Code',
   [Model.GROK_IMAGE]: 'Grok Image',
+  // DeepSeek
   [Model.DEEPSEEK_CHAT]: 'DeepSeek Chat',
   [Model.DEEPSEEK_RES]: 'DeepSeek Reasoner',
-  [Model.SOLAR_PRO]: 'Solar Pro',
-  [Model.SOLAR_PRO2]: 'Solar Pro 2',
 };
 
 export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
