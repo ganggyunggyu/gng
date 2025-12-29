@@ -84,14 +84,33 @@ export function Sidebar() {
     await createThread();
   };
 
+  const handleSelectThread = (threadId: string) => {
+    setSelectedThreadId(threadId);
+    // 모바일에서 채팅 선택 시 사이드바 닫기
+    if (window.innerWidth < 768) {
+      setSidebarOpen(false);
+    }
+  };
+
   return (
-    <aside
-      className={cn(
-        'h-full border-r bg-sidebar transition-all duration-300 ease-in-out overflow-hidden',
-        sidebarOpen ? 'w-72' : 'w-0 border-r-0',
+    <>
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
       )}
-    >
-      <div className="flex h-full w-72 flex-col">
+      <aside
+        className={cn(
+          'h-full bg-sidebar transition-all duration-300 ease-in-out overflow-hidden',
+          // Mobile: fixed overlay
+          'fixed inset-y-0 left-0 z-50 md:relative md:z-auto',
+          // Width & visibility
+          sidebarOpen ? 'w-72 border-r' : 'w-0 border-r-0',
+        )}
+      >
+        <div className="flex h-full w-72 flex-col">
         <div className="flex h-14 items-center justify-between border-b px-4">
         <h1 className="text-xl font-bold font-(family-name:--font-space-grotesk)">Gng</h1>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
@@ -253,7 +272,7 @@ export function Sidebar() {
                             )}
                           >
                             <button
-                              onClick={() => setSelectedThreadId(thread.id)}
+                              onClick={() => handleSelectThread(thread.id)}
                               className="flex flex-1 min-w-0 items-center gap-2 text-sm"
                             >
                               <MessageSquare className="h-3.5 w-3.5 shrink-0" />
@@ -294,5 +313,6 @@ export function Sidebar() {
       <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     </aside>
+    </>
   );
 }

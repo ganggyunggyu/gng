@@ -268,7 +268,7 @@ export function ChatInput() {
   const canRetry = messages.length > 0 && messages[messages.length - 1]?.role === 'assistant';
 
   return (
-    <div className="shrink-0 border-t bg-background p-4">
+    <div className="shrink-0 border-t bg-background p-3 sm:p-4">
       <div className="mx-auto max-w-3xl">
         {images.length > 0 && (
           <div className="mb-3 flex flex-wrap gap-2">

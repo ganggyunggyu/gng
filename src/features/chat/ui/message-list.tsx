@@ -207,7 +207,7 @@ function MessageItem({ message }: MessageItemProps) {
   return (
     <div
       className={cn(
-        'group flex gap-3 px-4 py-6',
+        'group flex gap-3 px-3 py-4 sm:px-4 sm:py-6',
         isUser ? 'bg-transparent' : 'bg-muted/30',
       )}
     >
@@ -219,7 +219,7 @@ function MessageItem({ message }: MessageItemProps) {
       >
         {isUser ? <User className="h-4 w-4" /> : <Bot className="h-4 w-4" />}
       </div>
-      <div className="flex-1 space-y-2">
+      <div className="min-w-0 flex-1 space-y-2">
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium">{isUser ? 'You' : 'Assistant'}</span>
           {message.meta?.model && (
@@ -234,9 +234,9 @@ function MessageItem({ message }: MessageItemProps) {
             </Badge>
           )}
         </div>
-        <div className="prose prose-sm dark:prose-invert max-w-none [counter-reset:list-counter]">
+        <div className="prose prose-sm dark:prose-invert max-w-none wrap-break-word [counter-reset:list-counter]">
           {isUser ? (
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            <p className="whitespace-pre-wrap wrap-break-word">{message.content}</p>
           ) : (
             <MarkdownContent content={message.content} />
           )}
