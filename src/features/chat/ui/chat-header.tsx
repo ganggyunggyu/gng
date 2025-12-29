@@ -22,7 +22,7 @@ export function ChatHeader() {
           </Button>
         )}
         <nav className="flex items-center gap-1 text-sm">
-          <span className="font-semibold">Gng</span>
+          <span className="font-semibold font-(family-name:--font-space-grotesk)">Gng</span>
           {selectedProject && (
             <>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />

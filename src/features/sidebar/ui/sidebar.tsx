@@ -31,7 +31,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog';
-import { cn } from '@/shared/lib';
+import { cn, formatShortcut } from '@/shared/lib';
 import { Model } from '@/shared/providers';
 import type { Provider } from '@/shared/types';
 import {
@@ -40,7 +40,7 @@ import {
   useProjects,
 } from '@/entities/project';
 import { selectedThreadIdAtom, useThreads } from '@/entities/thread';
-import { sidebarOpenAtom } from '../model';
+import { sidebarOpenAtom, projectDialogOpenAtom, settingsDialogOpenAtom } from '../model';
 import { ModelSelector, ProjectSettings } from '@/features/settings';
 
 export function Sidebar() {
@@ -55,8 +55,8 @@ export function Sidebar() {
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O);
   const [newProjectProvider, setNewProjectProvider] = useState<Provider>('openai');
-  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [projectDialogOpen, setProjectDialogOpen] = useAtom(projectDialogOpenAtom);
+  const [settingsOpen, setSettingsOpen] = useAtom(settingsDialogOpenAtom);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProjects = projects.filter((p) =>
@@ -93,7 +93,7 @@ export function Sidebar() {
     >
       <div className="flex h-full w-72 flex-col">
         <div className="flex h-14 items-center justify-between border-b px-4">
-        <h1 className="text-xl font-bold">Gng</h1>
+        <h1 className="text-xl font-bold font-(family-name:--font-space-grotesk)">Gng</h1>
         <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
           <PanelLeftClose className="h-4 w-4" />
         </Button>
@@ -256,8 +256,8 @@ export function Sidebar() {
                               onClick={() => setSelectedThreadId(thread.id)}
                               className="flex flex-1 min-w-0 items-center gap-2 text-sm"
                             >
-                              <MessageSquare className="h-3.5 w-3.5" />
-                              <span className="truncate">{thread.title}</span>
+                              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                              <span className="min-w-0 line-clamp-1">{thread.title}</span>
                             </button>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>

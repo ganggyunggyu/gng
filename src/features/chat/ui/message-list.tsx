@@ -11,7 +11,7 @@ import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Badge } from '@/shared/ui/badge';
 import { Button } from '@/shared/ui/button';
-import { cn } from '@/shared/lib';
+import { cn, getModKey } from '@/shared/lib';
 import { streamingStateByThreadAtom, useMessages } from '@/entities/message';
 import { selectedThreadIdAtom } from '@/entities/thread';
 import type { Message } from '@/shared/types';
@@ -371,7 +371,7 @@ export function MessageList() {
             <div className="relative">
               <div className="absolute inset-0 animate-pulse rounded-full bg-foreground/5 blur-2xl" />
               <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-foreground shadow-2xl">
-                <span className="text-3xl font-black text-background">G</span>
+                <span className="text-4xl font-bold text-background font-(family-name:--font-space-grotesk)">G</span>
               </div>
             </div>
 
@@ -390,7 +390,10 @@ export function MessageList() {
               <p>Create a project to get started</p>
               <p className="flex items-center gap-2 text-xs text-muted-foreground/60">
                 <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-                  ⌘
+                  {getModKey()}
+                </kbd>
+                <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+                  ⇧
                 </kbd>
                 <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 font-mono text-[10px]">
                   P
