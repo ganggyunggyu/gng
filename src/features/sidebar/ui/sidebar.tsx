@@ -31,6 +31,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/shared/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/shared/ui/alert-dialog';
 import { cn, formatShortcut } from '@/shared/lib';
 import { Model } from '@/shared/providers';
 import type { Provider } from '@/shared/types';
@@ -57,7 +67,9 @@ export function Sidebar() {
   const setThreadReadAt = useSetAtom(setThreadReadAtAtom);
 
   const { projects, createProject, deleteProject } = useProjects();
-  const { threads, createThread, deleteThread } = useThreads();
+  const { threads, createThread, deleteThread, deleteAllThreads } = useThreads();
+  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
+  const [deleteAllTargetProjectId, setDeleteAllTargetProjectId] = useState<string | null>(null);
 
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O);
@@ -274,12 +286,24 @@ export function Sidebar() {
                               Settings
                             </DropdownMenuItem>
                           )}
+                          {isSelected && threads.length > 0 && (
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => {
+                                setDeleteAllTargetProjectId(project.id);
+                                setDeleteAllDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete All Chats
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive"
                             onClick={() => deleteProject(project.id)}
                           >
                             <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
+                            Delete Project
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -368,6 +392,32 @@ export function Sidebar() {
       <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     </aside>
+
+    <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete All Chats</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete all {threads.length} chats in this project?
+            This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            onClick={async () => {
+              if (deleteAllTargetProjectId === selectedProjectId) {
+                await deleteAllThreads();
+              }
+              setDeleteAllTargetProjectId(null);
+            }}
+          >
+            Delete All
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     </>
   );
 }
