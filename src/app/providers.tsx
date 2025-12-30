@@ -8,7 +8,7 @@ interface ProvidersProps {
   children: React.ReactNode;
 }
 
-export function Providers({ children }: ProvidersProps) {
+export const Providers = ({ children }: ProvidersProps) => {
   return (
     <JotaiProvider>
       <TooltipProvider delayDuration={300}>

@@ -8,7 +8,7 @@ import { projectsAtom, selectedProjectIdAtom } from './model';
 import { selectedThreadIdAtom } from '@/entities/thread';
 import { createId, type Project, type ModelConfig, type PromptVersion } from '@/shared/types';
 
-export function useProjects() {
+export const useProjects = () => {
   const [, setProjects] = useAtom(projectsAtom);
   const [selectedProjectId, setSelectedProjectId] = useAtom(selectedProjectIdAtom);
   const [, setSelectedThreadId] = useAtom(selectedThreadIdAtom);

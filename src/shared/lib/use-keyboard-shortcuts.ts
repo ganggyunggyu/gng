@@ -15,7 +15,7 @@ interface ShortcutConfig {
   preventDefault?: boolean;
 }
 
-export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
+export const useKeyboardShortcuts = (shortcuts: ShortcutConfig[]) => {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
@@ -71,11 +71,11 @@ export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
 }
 
 // 단축키 표시용 헬퍼 (UI에서 사용)
-export function getModKey(): string {
+export const getModKey = (): string => {
   return isMac ? '⌘' : 'Ctrl';
 }
 
-export function formatShortcut(shortcut: { mod?: boolean; shift?: boolean; key: string }): string {
+export const formatShortcut = (shortcut: { mod?: boolean; shift?: boolean; key: string }): string => {
   const parts: string[] = [];
   if (shortcut.mod) parts.push(getModKey());
   if (shortcut.shift) parts.push(isMac ? '⇧' : 'Shift');

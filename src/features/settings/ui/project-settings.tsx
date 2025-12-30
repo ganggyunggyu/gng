@@ -22,7 +22,7 @@ interface ProjectSettingsProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
+export const ProjectSettings = ({ open, onOpenChange }: ProjectSettingsProps) => {
   const selectedProject = useAtomValue(selectedProjectAtom);
   const { updateProject } = useProjects();
   const { currentPromptVersion, updatePromptLayers } = usePromptVersion();
@@ -150,4 +150,4 @@ export function ProjectSettings({ open, onOpenChange }: ProjectSettingsProps) {
       </DialogContent>
     </Dialog>
   );
-}
+};

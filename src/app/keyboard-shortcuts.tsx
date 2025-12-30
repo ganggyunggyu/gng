@@ -10,7 +10,7 @@ import {
 import { selectedProjectAtom } from '@/entities/project';
 import { useThreads } from '@/entities/thread';
 
-export function KeyboardShortcuts() {
+export const KeyboardShortcuts = () => {
   const setSidebarOpen = useSetAtom(sidebarOpenAtom);
   const setProjectDialogOpen = useSetAtom(projectDialogOpenAtom);
   const setSettingsDialogOpen = useSetAtom(settingsDialogOpenAtom);

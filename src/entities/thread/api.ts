@@ -8,7 +8,7 @@ import { threadsAtom, selectedThreadIdAtom } from './model';
 import { selectedProjectIdAtom, selectedProjectAtom } from '@/entities/project/model';
 import { createId, type Thread } from '@/shared/types';
 
-export function useThreads() {
+export const useThreads = () => {
   const [, setThreads] = useAtom(threadsAtom);
   const selectedProjectId = useAtomValue(selectedProjectIdAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);

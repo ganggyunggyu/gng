@@ -2,7 +2,7 @@
 
 ## 프로젝트 개요
 프로젝트 단위로 시스템 프롬프트/모델을 교체하며 결과를 비교하는 AI Chat Workbench.  
-Next.js App Router 기반이며 SSE 스트리밍을 통해 채팅 응답을 수신한다.
+Next.js App Router 기반이며 SSE 스트리밍으로 채팅 응답을 수신한다.
 
 ## 기술 스택
 - Next.js 16 (App Router)
@@ -24,16 +24,18 @@ src/
 │   └── providers.tsx    # Jotai/Tooltip Provider
 ├── entities/           # 도메인 모델 + API
 ├── features/           # 기능 단위 UI/모델/훅
-└── shared/             # 공용 API, UI, lib, types
-    ├── api/             # provider adapter + callAI
-    ├── lib/             # cn 유틸
+└── shared/             # 공용 인프라, UI, lib, types
+    ├── db/              # Dexie IndexedDB
+    ├── lib/             # cn, 공용 유틸
+    ├── providers/       # provider adapter + callAI
     ├── ui/              # 공용 UI 컴포넌트
     └── types/           # 공용 타입
 ```
 
 ## 핵심 파일
-- `src/shared/api/call-ai.ts`: 통합 AI 호출 (비스트리밍/스트리밍)
-- `src/shared/api/*`: Provider adapter (openai/anthropic/gemini/xai/deepseek/solar)
+- `src/shared/providers/call-ai.ts`: 통합 AI 호출 (비스트리밍/스트리밍)
+- `src/shared/providers/adapters/*`: Provider adapter (openai/anthropic/gemini/xai/deepseek/solar)
+- `src/shared/providers/models.ts`: 모델/Provider 매핑
 - `src/shared/lib/utils.ts`: `cn` 유틸
 - `src/app/api/chat/route.ts`: SSE 스트리밍 엔드포인트
 - `src/app/providers.tsx`: 전역 Provider 구성
@@ -61,11 +63,11 @@ SOLAR_API_KEY=
 - `className`은 항상 `cn()` 사용.
 - React Fragment는 `React.Fragment`만 사용.
 - Jotai atom은 `src/shared` 또는 `features` 레이어에 배치.
-- SSE 스트리밍 형식은 `src/shared/api/types.ts` 규격 유지.
+- SSE 스트리밍 형식은 `src/shared/providers/types.ts` 규격 유지.
 - 신규 Provider 추가 시:
-  - `src/shared/api/`에 adapter 추가
-  - `src/shared/api/models.ts`에 모델/표시명/Provider 매핑 추가
-  - `src/shared/api/index.ts`에서 adapter 등록
+  - `src/shared/providers/adapters/`에 adapter 추가
+  - `src/shared/providers/models.ts`에 모델/표시명/Provider 매핑 추가
+  - `src/shared/providers/index.ts`에서 adapter 등록
 
 ## UI 규칙
 - 이모지 사용 지양, 아이콘은 `lucide-react` 사용.

@@ -13,7 +13,13 @@ import {
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
 import { ChevronDown, Sparkles, Zap, Brain, Bot, Atom, Sun } from 'lucide-react';
-import { Model, MODELS_BY_PROVIDER, getProviderFromModel } from '@/shared/providers';
+import { cn } from '@/shared/lib';
+import {
+  IMAGE_MODEL_CONFIG,
+  Model,
+  MODELS_BY_PROVIDER,
+  getProviderFromModel,
+} from '@/shared/providers';
 import type { Provider } from '@/shared/types';
 
 interface ModelSelectorProps {
@@ -47,9 +53,12 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.CLAUDE_HAIKU_3_5]: 'Claude Haiku 3.5',
   [Model.CLAUDE_OPUS_3]: 'Claude Opus 3',
   // Google Gemini
+  [Model.GEMINI_2_5_FLASH_IMAGE]: 'Gemini 2.5 Flash Image',
+  [Model.GEMINI_3_PRO_IMAGE_PREVIEW]: 'Gemini 3 Pro Image Preview',
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
-  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
+  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash Preview',
   [Model.GEMINI_2_FLASH]: 'Gemini 2 Flash',
+  [Model.IMAGEN_4]: 'Imagen 4',
   // xAI Grok
   [Model.GROK_4]: 'Grok 4',
   [Model.GROK_4_FAST]: 'Grok 4 Fast',
@@ -64,7 +73,7 @@ const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.DEEPSEEK_RES]: 'DeepSeek Reasoner',
 };
 
-export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps) {
+export const ModelSelector = ({ value, onChange, disabled }: ModelSelectorProps) => {
   const currentProvider = useMemo(() => {
     try {
       return getProviderFromModel(value);
@@ -75,22 +84,35 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
 
   const providerInfo = PROVIDER_INFO[currentProvider];
   const displayName = MODEL_DISPLAY_NAMES[value] || value;
+  const isImageModel = Boolean(IMAGE_MODEL_CONFIG[value]);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full justify-between" disabled={disabled}>
-          <div className="flex items-center gap-2">
-            <providerInfo.icon className="h-4 w-4" />
+        <Button
+          variant="outline"
+          className={cn('w-full justify-between')}
+          disabled={disabled}
+        >
+          <div className={cn('flex items-center gap-2')}>
+            <providerInfo.icon className={cn('h-4 w-4')} />
             <span>{displayName}</span>
-            <Badge variant="secondary" className="text-xs">
+            <Badge variant="secondary" className={cn('text-xs')}>
               {providerInfo.label}
             </Badge>
+            {isImageModel && (
+              <Badge variant="outline" className={cn('text-xs')}>
+                이미지 생성
+              </Badge>
+            )}
           </div>
-          <ChevronDown className="h-4 w-4 opacity-50" />
+          <ChevronDown className={cn('h-4 w-4 opacity-50')} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-72 max-h-96 overflow-y-auto" align="start">
+      <DropdownMenuContent
+        className={cn('w-72 max-h-96 overflow-y-auto')}
+        align="start"
+      >
         {(Object.entries(MODELS_BY_PROVIDER) as [Provider, string[]][]).map(
           ([provider, models], idx) => {
             const info = PROVIDER_INFO[provider];
@@ -98,25 +120,36 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
             return (
               <DropdownMenuGroup key={provider}>
                 {idx > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuLabel className="flex items-center gap-2">
-                  <div className={`h-2 w-2 rounded-full ${info.color}`} />
+                <DropdownMenuLabel className={cn('flex items-center gap-2')}>
+                  <div className={cn('h-2 w-2 rounded-full', info.color)} />
                   {info.label}
                 </DropdownMenuLabel>
-                {models.map((model) => (
-                  <DropdownMenuItem
-                    key={model}
-                    onClick={() => onChange(model, provider)}
-                    className="flex items-center gap-2"
-                  >
-                    <Icon className="h-4 w-4" />
-                    <span>{MODEL_DISPLAY_NAMES[model] || model}</span>
-                    {model === value && (
-                      <Badge variant="default" className="ml-auto text-xs">
-                        Selected
-                      </Badge>
-                    )}
-                  </DropdownMenuItem>
-                ))}
+                {models.map((model) => {
+                  const isSelected = model === value;
+                  const isModelImage = Boolean(IMAGE_MODEL_CONFIG[model]);
+                  return (
+                    <DropdownMenuItem
+                      key={model}
+                      onClick={() => onChange(model, provider)}
+                      className={cn('flex items-center gap-2')}
+                    >
+                      <Icon className={cn('h-4 w-4')} />
+                      <span>{MODEL_DISPLAY_NAMES[model] || model}</span>
+                      <div className={cn('ml-auto flex items-center gap-1')}>
+                        {isModelImage && (
+                          <Badge variant="outline" className={cn('text-xs')}>
+                            이미지 생성
+                          </Badge>
+                        )}
+                        {isSelected && (
+                          <Badge variant="default" className={cn('text-xs')}>
+                            Selected
+                          </Badge>
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })}
               </DropdownMenuGroup>
             );
           },
@@ -124,4 +157,4 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};

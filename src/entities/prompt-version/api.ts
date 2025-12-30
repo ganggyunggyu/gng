@@ -7,7 +7,7 @@ import { currentPromptVersionAtom } from './model';
 import { selectedProjectAtom } from '@/entities/project';
 import { createId, type PromptVersion, type PromptLayers } from '@/shared/types';
 
-export function usePromptVersion() {
+export const usePromptVersion = () => {
   const selectedProject = useAtomValue(selectedProjectAtom);
   const [currentPromptVersion, setCurrentPromptVersion] = useAtom(currentPromptVersionAtom);
 

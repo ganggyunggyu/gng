@@ -8,7 +8,7 @@ import { messagesAtom } from './model';
 import { selectedThreadIdAtom } from '@/entities/thread/model';
 import { createId, type Message } from '@/shared/types';
 
-export function useMessages() {
+export const useMessages = () => {
   const [, setMessages] = useAtom(messagesAtom);
   const selectedThreadId = useAtomValue(selectedThreadIdAtom);
 
