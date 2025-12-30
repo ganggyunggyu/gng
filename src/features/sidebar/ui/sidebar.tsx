@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useAtom, useAtomValue } from 'jotai';
+import { useEffect, useState } from 'react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
   Plus,
   Settings,
@@ -39,7 +39,12 @@ import {
   selectedProjectAtom,
   useProjects,
 } from '@/entities/project';
-import { selectedThreadIdAtom, useThreads } from '@/entities/thread';
+import {
+  selectedThreadIdAtom,
+  threadReadAtAtom,
+  setThreadReadAtAtom,
+  useThreads,
+} from '@/entities/thread';
 import { sidebarOpenAtom, projectDialogOpenAtom, settingsDialogOpenAtom } from '../model';
 import { ModelSelector, ProjectSettings } from '@/features/settings';
 
@@ -48,6 +53,8 @@ export function Sidebar() {
   const [selectedProjectId, setSelectedProjectId] = useAtom(selectedProjectIdAtom);
   const [selectedThreadId, setSelectedThreadId] = useAtom(selectedThreadIdAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);
+  const threadReadAtById = useAtomValue(threadReadAtAtom);
+  const setThreadReadAt = useSetAtom(setThreadReadAtAtom);
 
   const { projects, createProject, deleteProject } = useProjects();
   const { threads, createThread, deleteThread } = useThreads();
@@ -84,7 +91,36 @@ export function Sidebar() {
     await createThread();
   };
 
+  useEffect(() => {
+    if (threads.length === 0) return;
+
+    threads.forEach((thread) => {
+      const { id, updatedAt } = thread;
+      if (threadReadAtById[id] !== undefined) return;
+      const readAt = new Date(updatedAt).getTime();
+      setThreadReadAt({ threadId: id, readAt });
+    });
+  }, [threads, threadReadAtById, setThreadReadAt]);
+
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    const selected = threads.find((thread) => thread.id === selectedThreadId);
+    if (!selected) return;
+    const updatedAt = new Date(selected.updatedAt).getTime();
+    const lastReadAt = threadReadAtById[selectedThreadId];
+    if (lastReadAt !== undefined && updatedAt <= lastReadAt) return;
+    setThreadReadAt({ threadId: selectedThreadId, readAt: updatedAt });
+  }, [selectedThreadId, threads, threadReadAtById, setThreadReadAt]);
+
   const handleSelectThread = (threadId: string) => {
+    const selected = threads.find((thread) => thread.id === threadId);
+    if (selected) {
+      const updatedAt = new Date(selected.updatedAt).getTime();
+      const lastReadAt = threadReadAtById[threadId];
+      if (lastReadAt === undefined || updatedAt > lastReadAt) {
+        setThreadReadAt({ threadId, readAt: updatedAt });
+      }
+    }
     setSelectedThreadId(threadId);
     // 모바일에서 채팅 선택 시 사이드바 닫기
     if (window.innerWidth < 768) {
@@ -263,43 +299,62 @@ export function Sidebar() {
                           No chats yet
                         </p>
                       ) : (
-                        threads.map((thread) => (
-                          <div
-                            key={thread.id}
-                            className={cn(
-                              'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
-                              selectedThreadId === thread.id && 'bg-sidebar-accent',
-                            )}
-                          >
-                            <button
-                              onClick={() => handleSelectThread(thread.id)}
-                              className="flex flex-1 min-w-0 items-center gap-2 text-sm"
+                        threads.map((thread) => {
+                          const { id, title, updatedAt } = thread;
+                          const isThreadSelected = selectedThreadId === id;
+                          const lastReadAt = threadReadAtById[id];
+                          const updatedAtMs = new Date(updatedAt).getTime();
+                          const hasUnread =
+                            !isThreadSelected &&
+                            lastReadAt !== undefined &&
+                            updatedAtMs > lastReadAt;
+
+                          return (
+                            <div
+                              key={id}
+                              className={cn(
+                                'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
+                                isThreadSelected && 'bg-sidebar-accent',
+                              )}
                             >
-                              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                              <span className="min-w-0 line-clamp-1">{thread.title}</span>
-                            </button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
-                                >
-                                  <MoreHorizontal className="h-3 w-3" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => deleteThread(thread.id)}
-                                >
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Delete
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        ))
+                              <button
+                                onClick={() => handleSelectThread(id)}
+                                className="flex flex-1 min-w-0 items-center gap-2 text-sm"
+                              >
+                                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                                <span className="min-w-0 line-clamp-1">{title}</span>
+                              </button>
+                              <div className={cn('flex items-center gap-1')}>
+                                {hasUnread && (
+                                  <span
+                                    className={cn('h-4 w-1 rounded-full bg-blue-500')}
+                                    aria-hidden="true"
+                                  />
+                                )}
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
+                                    >
+                                      <MoreHorizontal className="h-3 w-3" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    <DropdownMenuItem
+                                      className="text-destructive"
+                                      onClick={() => deleteThread(id)}
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            </div>
+                          );
+                        })
                       )}
                     </div>
                   </div>
