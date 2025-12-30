@@ -1,4 +1,4 @@
-export { Chat } from './chat';
-export { ChatHeader } from './chat-header';
-export { ChatInput } from './chat-input';
-export { MessageList } from './message-list';
+export { Chat } from '@/features/chat/ui/chat';
+export { ChatHeader } from '@/features/chat/ui/chat-header';
+export { ChatInput } from '@/features/chat/ui/chat-input';
+export { MessageList } from '@/features/chat/ui/message-list';

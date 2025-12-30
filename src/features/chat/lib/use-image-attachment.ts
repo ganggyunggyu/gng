@@ -17,7 +17,7 @@ export interface UseImageAttachmentReturn {
   clearImages: () => void;
 }
 
-export function useImageAttachment(): UseImageAttachmentReturn {
+export const useImageAttachment = (): UseImageAttachmentReturn => {
   const [images, setImages] = useState<ImagePreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

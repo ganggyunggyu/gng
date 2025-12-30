@@ -1,15 +1,16 @@
 'use client';
 
-import { ChatHeader } from './chat-header';
-import { MessageList } from './message-list';
-import { ChatInput } from './chat-input';
+import { cn } from '@/shared/lib';
+import { ChatHeader } from '@/features/chat/ui/chat-header';
+import { MessageList } from '@/features/chat/ui/message-list';
+import { ChatInput } from '@/features/chat/ui/chat-input';
 
-export function Chat() {
+export const Chat = () => {
   return (
-    <main className="flex h-full flex-1 flex-col overflow-hidden">
+    <main className={cn('flex h-full flex-1 flex-col overflow-hidden')}>
       <ChatHeader />
       <MessageList />
       <ChatInput />
     </main>
   );
-}
+};

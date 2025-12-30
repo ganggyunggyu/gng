@@ -27,7 +27,7 @@ const PROVIDER_LABELS: Record<Provider, string> = {
   solar: 'Solar',
 };
 
-export function ModelSelector() {
+export const ModelSelector = () => {
   const [open, setOpen] = useState(false);
   const selectedProject = useAtomValue(selectedProjectAtom);
   const { updateProject } = useProjects();
@@ -50,16 +50,16 @@ export function ModelSelector() {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="h-8 gap-1.5 px-3 text-sm font-normal">
-          <span className="max-w-[140px] truncate">{currentModel}</span>
-          <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+        <Button variant="outline" className={cn("h-8 gap-1.5 px-3 text-sm font-normal")}>
+          <span className={cn("max-w-[140px] truncate")}>{currentModel}</span>
+          <ChevronDown className={cn("h-3.5 w-3.5 opacity-50")} />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-[200px]">
+      <DropdownMenuContent align="end" className={cn("w-[200px]")}>
         {(Object.keys(MODELS_BY_PROVIDER) as Provider[]).map((provider, idx) => (
           <DropdownMenuGroup key={provider}>
             {idx > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
+            <DropdownMenuLabel className={cn("text-xs text-muted-foreground")}>
               {PROVIDER_LABELS[provider]}
             </DropdownMenuLabel>
             {MODELS_BY_PROVIDER[provider].map((model) => {
@@ -70,8 +70,8 @@ export function ModelSelector() {
                   onClick={() => handleSelect(provider, model)}
                   className={cn('justify-between', isSelected && 'bg-accent')}
                 >
-                  <span className="truncate">{model}</span>
-                  {isSelected && <Check className="h-4 w-4" />}
+                  <span className={cn("truncate")}>{model}</span>
+                  {isSelected && <Check className={cn("h-4 w-4")} />}
                 </DropdownMenuItem>
               );
             })}
@@ -80,4 +80,4 @@ export function ModelSelector() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-}
+};
