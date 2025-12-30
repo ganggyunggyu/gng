@@ -25,10 +25,12 @@ export function ChatInput() {
   const setStreamingState = useSetAtom(setStreamingStateAtom);
   const selectedThread = useAtomValue(selectedThreadAtom);
   const selectedProject = useAtomValue(selectedProjectAtom);
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const abortControllersRef = useRef<Record<string, AbortController>>({});
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isStreaming = selectedThread ? streamingState[selectedThread.id]?.isStreaming ?? false : false;
+  const isStreaming = selectedThread
+    ? streamingState[selectedThread.id]?.isStreaming ?? false
+    : false;
 
   const { messages, addMessage } = useMessages();
   const { updateThread } = useThreads();
@@ -53,29 +55,31 @@ export function ChatInput() {
   const handleImageGenerate = useCallback(async () => {
     if (!input.trim() || isStreaming || !selectedThread) return;
 
+    const { id: threadId } = selectedThread;
+
     await addMessage({
-      threadId: selectedThread.id,
+      threadId,
       role: 'user',
       content: `🎨 ${input.trim()}`,
     });
 
     if (messages.length === 0) {
       const title = `🎨 ${input.trim().slice(0, 25)}...`;
-      await updateThread(selectedThread.id, { title });
+      await updateThread(threadId, { title });
     }
 
-    const threadId = selectedThread.id;
     setInput('');
     setStreamingState({ threadId, isStreaming: true, content: 'Generating image...' });
 
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllersRef.current[threadId] = controller;
     const startTime = Date.now();
 
     try {
       const { data } = await axios.post<{ imageUrl: string; revisedPrompt?: string }>(
         '/api/image',
         { prompt: input.trim(), systemPrompt: getSystemPrompt() },
-        { signal: abortControllerRef.current.signal },
+        { signal: controller.signal },
       );
 
       const { imageUrl, revisedPrompt } = data;
@@ -114,7 +118,7 @@ export function ChatInput() {
       }
     } finally {
       setStreamingState({ threadId, isStreaming: false, content: '' });
-      abortControllerRef.current = null;
+      delete abortControllersRef.current[threadId];
     }
   }, [input, isStreaming, selectedThread, messages, addMessage, updateThread, setStreamingState, getSystemPrompt]);
 
@@ -125,13 +129,15 @@ export function ChatInput() {
 
     if (!input.trim() || isStreaming || !selectedThread || !selectedProject) return;
 
+    const { id: threadId } = selectedThread;
+    const { modelConfig } = selectedProject;
+    const { provider } = modelConfig;
+
     const userMessage = await addMessage({
-      threadId: selectedThread.id,
+      threadId,
       role: 'user',
       content: input.trim(),
     });
-
-    const threadId = selectedThread.id;
 
     if (messages.length === 0) {
       const title = input.trim().slice(0, 30) + (input.trim().length > 30 ? '...' : '');
@@ -141,7 +147,8 @@ export function ChatInput() {
     setInput('');
     setStreamingState({ threadId, isStreaming: true, content: '' });
 
-    abortControllerRef.current = new AbortController();
+    const controller = new AbortController();
+    abortControllersRef.current[threadId] = controller;
 
     const allMessages = [...messages, userMessage];
     let content = '';
@@ -156,10 +163,10 @@ export function ChatInput() {
             role: m.role,
             content: m.content,
           })),
-          modelConfig: selectedProject.modelConfig,
+          modelConfig,
           systemPrompt: getSystemPrompt(),
         }),
-        signal: abortControllerRef.current.signal,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -204,8 +211,8 @@ export function ChatInput() {
         role: 'assistant',
         content,
         meta: {
-          provider: selectedProject.modelConfig.provider,
-          model: selectedProject.modelConfig.modelName,
+          provider,
+          model: modelConfig.modelName,
           latencyMs: Date.now() - startTime,
         },
       });
@@ -217,8 +224,8 @@ export function ChatInput() {
             role: 'assistant',
             content,
             meta: {
-              provider: selectedProject.modelConfig.provider,
-              model: selectedProject.modelConfig.modelName,
+              provider,
+              model: modelConfig.modelName,
               latencyMs: Date.now() - startTime,
               error: 'Stopped by user',
             },
@@ -237,7 +244,7 @@ export function ChatInput() {
       }
     } finally {
       setStreamingState({ threadId, isStreaming: false, content: '' });
-      abortControllerRef.current = null;
+      delete abortControllersRef.current[threadId];
     }
   }, [
     input,
@@ -254,8 +261,13 @@ export function ChatInput() {
   ]);
 
   const handleStop = useCallback(() => {
-    abortControllerRef.current?.abort();
-  }, []);
+    const threadId = selectedThread?.id;
+    if (!threadId) return;
+    const controller = abortControllersRef.current[threadId];
+    if (controller) {
+      controller.abort();
+    }
+  }, [selectedThread]);
 
   const handleRetry = useCallback(async () => {
     if (messages.length < 2) return;
