@@ -4,12 +4,48 @@ import { setStreamingStateAtom } from '@/entities/message';
 import { selectedThreadAtom, useThreads } from '@/entities/thread';
 import { selectedProjectAtom } from '@/entities/project';
 import { usePromptVersion } from '@/entities/prompt-version';
-import type { Message } from '@/shared/types';
+import type { InternalMessage, Message } from '@/shared/types';
 
 interface UseChatSubmitParams {
   messages: Message[];
   addMessage: (msg: Omit<Message, 'id' | 'createdAt'>) => Promise<Message>;
 }
+
+const GEMINI_INPUT_TOKEN_LIMIT = 32768;
+const GEMINI_SAFETY_TOKENS = 512;
+const GEMINI_CHARS_PER_TOKEN = 2;
+
+const estimateGeminiTokens = (text: string): number =>
+  Math.ceil(text.length / GEMINI_CHARS_PER_TOKEN);
+
+const trimMessagesForGemini = (
+  messages: InternalMessage[],
+  systemPrompt?: string,
+): InternalMessage[] => {
+  const systemTokens = systemPrompt ? estimateGeminiTokens(systemPrompt) : 0;
+  const budget = Math.max(0, GEMINI_INPUT_TOKEN_LIMIT - systemTokens - GEMINI_SAFETY_TOKENS);
+  const trimmed: InternalMessage[] = [];
+  let totalTokens = 0;
+
+  for (let idx = messages.length - 1; idx >= 0; idx -= 1) {
+    const message = messages[idx];
+    const tokens = estimateGeminiTokens(message.content);
+    if (totalTokens + tokens > budget) break;
+    totalTokens += tokens;
+    trimmed.unshift(message);
+  }
+
+  if (trimmed.length === 0 && messages.length > 0) {
+    const lastMessage = messages[messages.length - 1];
+    const maxChars = Math.max(0, Math.floor(budget * GEMINI_CHARS_PER_TOKEN));
+    trimmed.push({
+      ...lastMessage,
+      content: lastMessage.content.slice(-maxChars),
+    });
+  }
+
+  return trimmed;
+};
 
 export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => {
   const setStreamingState = useSetAtom(setStreamingStateAtom);
@@ -21,7 +57,8 @@ export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => 
 
   const handleSubmit = useCallback(
     async (input: string) => {
-      if (!input.trim() || !selectedThread || !selectedProject) return;
+      const trimmedInput = input.trim();
+      if (!trimmedInput || !selectedThread || !selectedProject) return;
 
       const { id: threadId } = selectedThread;
       const { modelConfig } = selectedProject;
@@ -30,11 +67,12 @@ export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => 
       const userMessage = await addMessage({
         threadId,
         role: 'user',
-        content: input.trim(),
+        content: trimmedInput,
       });
 
       if (messages.length === 0) {
-        const title = input.trim().slice(0, 30) + (input.trim().length > 30 ? '...' : '');
+        const title =
+          trimmedInput.slice(0, 30) + (trimmedInput.length > 30 ? '...' : '');
         await updateThread(threadId, { title });
       }
 
@@ -44,6 +82,15 @@ export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => 
       abortControllersRef.current[threadId] = controller;
 
       const allMessages = [...messages, userMessage];
+      const systemPrompt = getSystemPrompt();
+      const requestMessages: InternalMessage[] = allMessages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+      const trimmedMessages =
+        provider === 'gemini'
+          ? trimMessagesForGemini(requestMessages, systemPrompt)
+          : requestMessages;
       let content = '';
       const startTime = Date.now();
 
@@ -52,12 +99,9 @@ export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            messages: allMessages.map((m) => ({
-              role: m.role,
-              content: m.content,
-            })),
+            messages: trimmedMessages,
             modelConfig,
-            systemPrompt: getSystemPrompt(),
+            systemPrompt,
           }),
           signal: controller.signal,
         });
@@ -140,7 +184,15 @@ export const useChatSubmit = ({ messages, addMessage }: UseChatSubmitParams) => 
         delete abortControllersRef.current[threadId];
       }
     },
-    [selectedThread, selectedProject, messages, addMessage, updateThread, setStreamingState, getSystemPrompt],
+    [
+      selectedThread,
+      selectedProject,
+      messages,
+      addMessage,
+      updateThread,
+      setStreamingState,
+      getSystemPrompt,
+    ],
   );
 
   const handleStop = useCallback(() => {

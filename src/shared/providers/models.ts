@@ -8,6 +8,7 @@ export const ImageModel = {
 
   // Gemini Flash Image
   GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
+  GEMINI_3_PRO_IMAGE_PREVIEW: 'gemini-3-pro-image-preview',
 
   // Google Imagen ($0.03/장)
   IMAGEN_3: 'imagen-3.0-generate-002', // 고품질
@@ -44,6 +45,12 @@ export const IMAGE_MODEL_CONFIG: Record<
       'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',
     apiKeyEnv: 'GEMINI_API_KEY',
   },
+  [ImageModel.GEMINI_3_PRO_IMAGE_PREVIEW]: {
+    provider: 'gemini-flash',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image-preview:generateContent',
+    apiKeyEnv: 'GEMINI_API_KEY',
+  },
   [ImageModel.IMAGEN_3]: {
     provider: 'gemini',
     endpoint:
@@ -73,6 +80,7 @@ export const IMAGE_MODEL_COST_USD: Record<string, number> = {
   [ImageModel.DALLE_3]: 0.04,
   [ImageModel.DALLE_2]: 0.02,
   [ImageModel.GEMINI_2_5_FLASH_IMAGE]: 0.039,
+  [ImageModel.GEMINI_3_PRO_IMAGE_PREVIEW]: 0,
   [ImageModel.IMAGEN_3]: 0.03,
   [ImageModel.IMAGEN_3_FAST]: 0.03,
   [ImageModel.IMAGEN_4]: 0.04,
@@ -104,6 +112,7 @@ export const Model = {
   // Google Gemini
   GEMINI_2_5_PRO: 'gemini-2.5-pro',
   GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
+  GEMINI_3_PRO_IMAGE_PREVIEW: 'gemini-3-pro-image-preview',
   GEMINI_3_PRO: 'gemini-3-pro-preview',
   GEMINI_3_FLASH: 'gemini-3-flash-preview',
   GEMINI_2_FLASH: 'gemini-2.0-flash',
@@ -184,6 +193,7 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
   gemini: [
     Model.GEMINI_2_5_PRO,
     Model.GEMINI_2_5_FLASH_IMAGE,
+    Model.GEMINI_3_PRO_IMAGE_PREVIEW,
     Model.GEMINI_3_PRO,
     Model.GEMINI_3_FLASH,
     Model.GEMINI_2_FLASH,
@@ -228,6 +238,7 @@ export const MODEL_DISPLAY_NAMES: Record<string, string> = {
   // Gemini
   [Model.GEMINI_2_5_PRO]: 'Gemini 2.5 Pro',
   [Model.GEMINI_2_5_FLASH_IMAGE]: 'Gemini 2.5 Flash Image',
+  [Model.GEMINI_3_PRO_IMAGE_PREVIEW]: 'Gemini 3 Pro Image Preview',
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
   [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash Preview',
   [Model.GEMINI_2_FLASH]: 'Gemini 2 Flash',

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { memo } from 'react';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform, type UrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkBreaks from 'remark-breaks';
 import { cn } from '@/shared/lib';
@@ -11,10 +11,20 @@ interface MarkdownContentProps {
   content: string;
 }
 
+const allowImageDataUrl: UrlTransform = (url, key, node) => {
+  const { tagName } = node;
+  if (key === 'src' && tagName === 'img' && url.startsWith('data:image/')) {
+    return url;
+  }
+
+  return defaultUrlTransform(url);
+};
+
 export const MarkdownContent = memo(function MarkdownContent({ content }: MarkdownContentProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm, remarkBreaks]}
+      urlTransform={allowImageDataUrl}
       components={{
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '');

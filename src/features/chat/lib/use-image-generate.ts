@@ -3,8 +3,10 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import axios from 'axios';
 import { setStreamingStateAtom } from '@/entities/message';
 import { selectedThreadAtom, useThreads } from '@/entities/thread';
+import { selectedProjectAtom } from '@/entities/project';
 import { usePromptVersion } from '@/entities/prompt-version';
-import type { Message } from '@/shared/types';
+import { IMAGE_MODEL_CONFIG } from '@/shared/providers';
+import type { Message, Provider } from '@/shared/types';
 
 interface UseImageGenerateParams {
   messages: Message[];
@@ -14,6 +16,7 @@ interface UseImageGenerateParams {
 export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParams) => {
   const setStreamingState = useSetAtom(setStreamingStateAtom);
   const selectedThread = useAtomValue(selectedThreadAtom);
+  const selectedProject = useAtomValue(selectedProjectAtom);
   const abortControllersRef = useRef<Record<string, AbortController>>({});
   const { updateThread } = useThreads();
   const { getSystemPrompt } = usePromptVersion();
@@ -23,6 +26,8 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
       if (!input.trim() || !selectedThread) return;
 
       const { id: threadId } = selectedThread;
+      const selectedModel = selectedProject?.modelConfig.modelName;
+      const imageModel = selectedModel && IMAGE_MODEL_CONFIG[selectedModel] ? selectedModel : undefined;
 
       await addMessage({
         threadId,
@@ -42,13 +47,24 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
       const startTime = Date.now();
 
       try {
-        const { data } = await axios.post<{ imageUrl: string; revisedPrompt?: string }>(
+        const { data } = await axios.post<{
+          imageUrl: string;
+          revisedPrompt?: string;
+          model: string;
+        }>(
           '/api/image',
-          { prompt: input.trim(), systemPrompt: getSystemPrompt() },
+          {
+            prompt: input.trim(),
+            systemPrompt: getSystemPrompt(),
+            ...(imageModel && { model: imageModel }),
+          },
           { signal: controller.signal },
         );
 
-        const { imageUrl, revisedPrompt } = data;
+        const { imageUrl, revisedPrompt, model } = data;
+        const provider = IMAGE_MODEL_CONFIG[model]?.provider;
+        const normalizedProvider: Provider | undefined =
+          provider === 'gemini-flash' ? 'gemini' : provider;
 
         const content = `![Generated Image](${imageUrl})\n\n*${revisedPrompt || input.trim()}*`;
 
@@ -57,8 +73,8 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
           role: 'assistant',
           content,
           meta: {
-            provider: 'openai',
-            model: 'dall-e-3',
+            ...(normalizedProvider && { provider: normalizedProvider }),
+            model,
             latencyMs: Date.now() - startTime,
           },
         });
@@ -87,7 +103,15 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
         delete abortControllersRef.current[threadId];
       }
     },
-    [selectedThread, messages, addMessage, updateThread, setStreamingState, getSystemPrompt],
+    [
+      selectedThread,
+      selectedProject,
+      messages,
+      addMessage,
+      updateThread,
+      setStreamingState,
+      getSystemPrompt,
+    ],
   );
 
   const handleStop = useCallback(() => {

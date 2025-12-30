@@ -56,6 +56,28 @@ const buildPrompt = (userPrompt: string, systemPrompt?: string): string => {
   return `${systemPrompt}\n\n${userPrompt}`;
 };
 
+const IMAGE_ASPECT_RATIOS = [
+  { label: '1:1', ratio: 1 },
+  { label: '3:4', ratio: 3 / 4 },
+  { label: '4:3', ratio: 4 / 3 },
+  { label: '9:16', ratio: 9 / 16 },
+  { label: '16:9', ratio: 16 / 9 },
+];
+
+const getAspectRatioFromSize = (size: string): string => {
+  const [width, height] = size.split('x').map((value) => Number(value));
+  if (!width || !height) return '1:1';
+  const ratio = width / height;
+
+  const closest = IMAGE_ASPECT_RATIOS.reduce((prev, current) => {
+    const prevDiff = Math.abs(prev.ratio - ratio);
+    const currentDiff = Math.abs(current.ratio - ratio);
+    return currentDiff < prevDiff ? current : prev;
+  });
+
+  return closest.label;
+};
+
 const generateWithOpenAI = async (
   prompt: string,
   model: string,
@@ -88,14 +110,16 @@ const generateWithGemini = async (
   prompt: string,
   endpoint: string,
   apiKey: string,
+  size: string,
 ): Promise<{ imageUrl: string; revisedPrompt?: string }> => {
+  const aspectRatio = getAspectRatioFromSize(size);
   const { data } = await axios.post<ImagenResponse>(
     endpoint,
     {
       instances: [{ prompt }],
       parameters: {
         sampleCount: 1,
-        aspectRatio: '1:1',
+        aspectRatio,
       },
     },
     {
@@ -117,21 +141,29 @@ const generateWithGeminiFlash = async (
   prompt: string,
   endpoint: string,
   apiKey: string,
+  size: string,
 ): Promise<{ imageUrl: string; revisedPrompt?: string }> => {
+  const aspectRatio = getAspectRatioFromSize(size);
   const { data } = await axios.post<GeminiFlashImageResponse>(
-    `${endpoint}?key=${apiKey}`,
+    endpoint,
     {
       contents: [
         {
+          role: 'user',
           parts: [{ text: prompt }],
         },
       ],
       generationConfig: {
-        responseModalities: ['IMAGE', 'TEXT'],
+        imageConfig: {
+          aspectRatio,
+        },
       },
     },
     {
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-goog-api-key': apiKey,
+      },
     },
   );
 
@@ -181,9 +213,9 @@ const generateByProvider: Record<
   openai: (prompt, model, size, _endpoint, apiKey) =>
     generateWithOpenAI(prompt, model, size, apiKey),
   gemini: (prompt, _model, _size, endpoint, apiKey) =>
-    generateWithGemini(prompt, endpoint, apiKey),
+    generateWithGemini(prompt, endpoint, apiKey, _size),
   'gemini-flash': (prompt, _model, _size, endpoint, apiKey) =>
-    generateWithGeminiFlash(prompt, endpoint, apiKey),
+    generateWithGeminiFlash(prompt, endpoint, apiKey, _size),
   xai: (prompt, model, _size, _endpoint, apiKey) => generateWithXAI(prompt, model, apiKey),
 };
 

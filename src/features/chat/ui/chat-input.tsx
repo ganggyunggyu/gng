@@ -6,7 +6,9 @@ import { Send, Square, RotateCcw, ImagePlus, X, Sparkles } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Textarea } from '@/shared/ui/textarea';
 import { cn } from '@/shared/lib';
+import { IMAGE_MODEL_CONFIG } from '@/shared/providers';
 import { streamingStateByThreadAtom, useMessages } from '@/entities/message';
+import { selectedProjectAtom } from '@/entities/project';
 import { selectedThreadAtom } from '@/entities/thread';
 import { isImageModeAtom } from '@/features/chat/model';
 import { useImageAttachment, useChatSubmit, useImageGenerate } from '@/features/chat/lib';
@@ -15,8 +17,14 @@ export const ChatInput = () => {
   const [input, setInput] = useState('');
   const [isImageMode, setIsImageMode] = useAtom(isImageModeAtom);
   const streamingState = useAtomValue(streamingStateByThreadAtom);
+  const selectedProject = useAtomValue(selectedProjectAtom);
   const selectedThread = useAtomValue(selectedThreadAtom);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const { modelConfig } = selectedProject ?? {};
+  const selectedModelName = modelConfig?.modelName;
+  const isImageModel = Boolean(selectedModelName && IMAGE_MODEL_CONFIG[selectedModelName]);
+  const isImageModeEnabled = isImageMode || isImageModel;
 
   const isStreaming = selectedThread
     ? streamingState[selectedThread.id]?.isStreaming ?? false
@@ -42,24 +50,31 @@ export const ChatInput = () => {
     }
   }, [isStreaming, selectedThread]);
 
+  useEffect(() => {
+    if (!selectedProject) return;
+    setIsImageMode(isImageModel);
+  }, [selectedProject, isImageModel, setIsImageMode]);
+
   const handleSubmit = useCallback(async () => {
     if (!input.trim()) return;
 
-    if (isImageMode) {
-      await generateImage(input);
-    } else {
-      await submitChat(input);
-    }
+    const messageToSend = input;
     setInput('');
-  }, [input, isImageMode, generateImage, submitChat]);
+
+    if (isImageModeEnabled) {
+      await generateImage(messageToSend);
+    } else {
+      await submitChat(messageToSend);
+    }
+  }, [input, isImageModeEnabled, generateImage, submitChat]);
 
   const handleStop = useCallback(() => {
-    if (isImageMode) {
+    if (isImageModeEnabled) {
       stopImage();
     } else {
       stopChat();
     }
-  }, [isImageMode, stopImage, stopChat]);
+  }, [isImageModeEnabled, stopImage, stopChat]);
 
   const handleRetry = useCallback(async () => {
     if (messages.length < 2) return;
@@ -138,15 +153,15 @@ export const ChatInput = () => {
 
             <Button
               type="button"
-              variant={isImageMode ? 'default' : 'ghost'}
+              variant={isImageModeEnabled ? 'default' : 'ghost'}
               size="icon"
               className={cn(
                 'shrink-0',
-                isImageMode &&
+                isImageModeEnabled &&
                   'bg-linear-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600',
               )}
               onClick={() => setIsImageMode(!isImageMode)}
-              disabled={!selectedThread || isStreaming}
+              disabled={!selectedThread || isStreaming || isImageModel}
             >
               <Sparkles className={cn('h-4 w-4')} />
             </Button>
@@ -159,7 +174,7 @@ export const ChatInput = () => {
               placeholder={
                 !selectedThread
                   ? 'Select a project and thread to start'
-                  : isImageMode
+                  : isImageModeEnabled
                     ? 'Describe the image you want to generate...'
                     : 'Type a message...'
               }
