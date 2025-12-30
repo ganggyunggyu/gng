@@ -70,6 +70,24 @@ export function useThreads() {
     [selectedThreadId, setSelectedThreadId],
   );
 
+  const deleteThreads = useCallback(
+    async (threadIds: string[]) => {
+      if (threadIds.length === 0) return;
+
+      await db.transaction('rw', [db.threads, db.messages], async () => {
+        for (const threadId of threadIds) {
+          await db.messages.where('threadId').equals(threadId).delete();
+          await db.threads.delete(threadId);
+        }
+      });
+
+      if (selectedThreadId && threadIds.includes(selectedThreadId)) {
+        setSelectedThreadId(null);
+      }
+    },
+    [selectedThreadId, setSelectedThreadId],
+  );
+
   const deleteAllThreads = useCallback(async () => {
     if (!selectedProjectId) return;
 
@@ -78,15 +96,8 @@ export function useThreads() {
       .equals(selectedProjectId)
       .primaryKeys();
 
-    await db.transaction('rw', [db.threads, db.messages], async () => {
-      for (const threadId of threadIds) {
-        await db.messages.where('threadId').equals(threadId).delete();
-      }
-      await db.threads.where('projectId').equals(selectedProjectId).delete();
-    });
-
-    setSelectedThreadId(null);
-  }, [selectedProjectId, setSelectedThreadId]);
+    await deleteThreads(threadIds);
+  }, [selectedProjectId, deleteThreads]);
 
   const updateThread = useCallback(async (threadId: string, updates: Partial<Thread>) => {
     await db.threads.update(threadId, {
@@ -100,6 +111,7 @@ export function useThreads() {
     isLoading: threads === undefined,
     createThread,
     deleteThread,
+    deleteThreads,
     deleteAllThreads,
     updateThread,
   };

@@ -13,8 +13,11 @@ import {
   Trash2,
   MoreHorizontal,
   ChevronRight,
+  Pencil,
+  X,
 } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { ScrollArea } from '@/shared/ui/scroll-area';
 import { Separator } from '@/shared/ui/separator';
@@ -67,9 +70,11 @@ export function Sidebar() {
   const setThreadReadAt = useSetAtom(setThreadReadAtAtom);
 
   const { projects, createProject, deleteProject } = useProjects();
-  const { threads, createThread, deleteThread, deleteAllThreads } = useThreads();
-  const [deleteAllDialogOpen, setDeleteAllDialogOpen] = useState(false);
-  const [deleteAllTargetProjectId, setDeleteAllTargetProjectId] = useState<string | null>(null);
+  const { threads, createThread, deleteThread, deleteThreads, deleteAllThreads } = useThreads();
+
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [selectedThreadIds, setSelectedThreadIds] = useState<Set<string>>(new Set());
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O);
@@ -134,10 +139,39 @@ export function Sidebar() {
       }
     }
     setSelectedThreadId(threadId);
-    // 모바일에서 채팅 선택 시 사이드바 닫기
     if (window.innerWidth < 768) {
       setSidebarOpen(false);
     }
+  };
+
+  const toggleThreadSelection = (threadId: string) => {
+    setSelectedThreadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(threadId)) {
+        next.delete(threadId);
+      } else {
+        next.add(threadId);
+      }
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedThreadIds.size === threads.length) {
+      setSelectedThreadIds(new Set());
+    } else {
+      setSelectedThreadIds(new Set(threads.map((t) => t.id)));
+    }
+  };
+
+  const exitEditMode = () => {
+    setIsEditMode(false);
+    setSelectedThreadIds(new Set());
+  };
+
+  const handleDeleteSelected = async () => {
+    await deleteThreads(Array.from(selectedThreadIds));
+    exitEditMode();
   };
 
   return (
@@ -256,17 +290,45 @@ export function Sidebar() {
                       <span className="truncate">{project.name}</span>
                     </button>
                     <div className="flex shrink-0 items-center gap-1">
-                      {isSelected && (
+                      {isSelected && !isEditMode && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCreateThread();
+                            }}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                          {threads.length > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setIsEditMode(true);
+                              }}
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </>
+                      )}
+                      {isSelected && isEditMode && (
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleCreateThread();
+                            exitEditMode();
                           }}
                         >
-                          <Plus className="h-3 w-3" />
+                          <X className="h-3 w-3" />
                         </Button>
                       )}
                       <DropdownMenu>
@@ -284,18 +346,6 @@ export function Sidebar() {
                             <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
                               <Settings className="mr-2 h-4 w-4" />
                               Settings
-                            </DropdownMenuItem>
-                          )}
-                          {isSelected && threads.length > 0 && (
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() => {
-                                setDeleteAllTargetProjectId(project.id);
-                                setDeleteAllDialogOpen(true);
-                              }}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete All Chats
                             </DropdownMenuItem>
                           )}
                           <DropdownMenuItem
@@ -326,6 +376,7 @@ export function Sidebar() {
                         threads.map((thread) => {
                           const { id, title, updatedAt } = thread;
                           const isThreadSelected = selectedThreadId === id;
+                          const isChecked = selectedThreadIds.has(id);
                           const lastReadAt = threadReadAtById[id];
                           const updatedAtMs = new Date(updatedAt).getTime();
                           const hasUnread =
@@ -338,44 +389,60 @@ export function Sidebar() {
                               key={id}
                               className={cn(
                                 'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
-                                isThreadSelected && 'bg-sidebar-accent',
+                                isThreadSelected && !isEditMode && 'bg-sidebar-accent',
+                                isEditMode && isChecked && 'bg-destructive/10',
                               )}
                             >
-                              <button
-                                onClick={() => handleSelectThread(id)}
-                                className="flex flex-1 min-w-0 items-center gap-2 text-sm"
-                              >
-                                <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                                <span className="min-w-0 line-clamp-1">{title}</span>
-                              </button>
-                              <div className={cn('flex items-center gap-1')}>
-                                {hasUnread && (
-                                  <span
-                                    className={cn('h-4 w-1 rounded-full bg-blue-500')}
-                                    aria-hidden="true"
+                              {isEditMode ? (
+                                <button
+                                  onClick={() => toggleThreadSelection(id)}
+                                  className="flex flex-1 min-w-0 items-center gap-2 text-sm"
+                                >
+                                  <Checkbox
+                                    checked={isChecked}
+                                    className="h-3.5 w-3.5"
                                   />
-                                )}
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
-                                    >
-                                      <MoreHorizontal className="h-3 w-3" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => deleteThread(id)}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </div>
+                                  <span className="min-w-0 line-clamp-1">{title}</span>
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleSelectThread(id)}
+                                    className="flex flex-1 min-w-0 items-center gap-2 text-sm"
+                                  >
+                                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="min-w-0 line-clamp-1">{title}</span>
+                                  </button>
+                                  <div className={cn('flex items-center gap-1')}>
+                                    {hasUnread && (
+                                      <span
+                                        className={cn('h-4 w-1 rounded-full bg-blue-500')}
+                                        aria-hidden="true"
+                                      />
+                                    )}
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
+                                        >
+                                          <MoreHorizontal className="h-3 w-3" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem
+                                          className="text-destructive"
+                                          onClick={() => deleteThread(id)}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           );
                         })
@@ -390,15 +457,40 @@ export function Sidebar() {
       </ScrollArea>
 
       <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {isEditMode && threads.length > 0 && (
+        <div className="border-t p-3">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={toggleSelectAll}
+            >
+              {selectedThreadIds.size === threads.length ? 'Deselect All' : 'Select All'}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="flex-1"
+              disabled={selectedThreadIds.size === 0}
+              onClick={() => setDeleteDialogOpen(true)}
+            >
+              <Trash2 className="mr-1 h-3 w-3" />
+              Delete ({selectedThreadIds.size})
+            </Button>
+          </div>
+        </div>
+      )}
       </div>
     </aside>
 
-    <AlertDialog open={deleteAllDialogOpen} onOpenChange={setDeleteAllDialogOpen}>
+    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete All Chats</AlertDialogTitle>
+          <AlertDialogTitle>Delete Selected Chats</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete all {threads.length} chats in this project?
+            Are you sure you want to delete {selectedThreadIds.size} selected chat{selectedThreadIds.size > 1 ? 's' : ''}?
             This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
@@ -406,14 +498,9 @@ export function Sidebar() {
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={async () => {
-              if (deleteAllTargetProjectId === selectedProjectId) {
-                await deleteAllThreads();
-              }
-              setDeleteAllTargetProjectId(null);
-            }}
+            onClick={handleDeleteSelected}
           >
-            Delete All
+            Delete
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
