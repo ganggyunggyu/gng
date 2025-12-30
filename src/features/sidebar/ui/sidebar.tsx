@@ -394,16 +394,18 @@ export function Sidebar() {
                               )}
                             >
                               {isEditMode ? (
-                                <button
+                                <div
                                   onClick={() => toggleThreadSelection(id)}
-                                  className="flex flex-1 min-w-0 items-center gap-2 text-sm"
+                                  className="flex flex-1 min-w-0 cursor-pointer items-center gap-2 text-sm"
                                 >
                                   <Checkbox
                                     checked={isChecked}
                                     className="h-3.5 w-3.5"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onCheckedChange={() => toggleThreadSelection(id)}
                                   />
                                   <span className="min-w-0 line-clamp-1">{title}</span>
-                                </button>
+                                </div>
                               ) : (
                                 <>
                                   <button
