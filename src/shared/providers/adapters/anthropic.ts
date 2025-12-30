@@ -1,6 +1,6 @@
-import type { ProviderAdapter, ChatParams } from '../types';
-import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from '../types';
+import type { InternalStreamEvent, TokenUsage } from '@/shared/types';
+import type { ChatParams, ProviderAdapter } from '@/shared/providers/types';
+import { createSSEStream } from '@/shared/providers/types';
 
 export const anthropicAdapter: ProviderAdapter = {
   name: 'anthropic',
@@ -43,9 +43,17 @@ export const anthropicAdapter: ProviderAdapter = {
       throw new Error('No response body');
     }
 
+    const toTokenUsage = (tokensIn?: number, tokensOut?: number): TokenUsage | null => {
+      const normalizedTokensIn = tokensIn ?? 0;
+      const normalizedTokensOut = tokensOut ?? 0;
+      if (!normalizedTokensIn && !normalizedTokensOut) return null;
+      return { tokensIn: normalizedTokensIn, tokensOut: normalizedTokensOut };
+    };
+
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
       const decoder = new TextDecoder();
       let buffer = '';
+      let hasUsage = false;
 
       try {
         while (true) {
@@ -68,6 +76,15 @@ export const anthropicAdapter: ProviderAdapter = {
 
             try {
               const parsed = JSON.parse(data);
+
+              if (!hasUsage) {
+                const usage = parsed.usage ?? parsed.message?.usage;
+                const tokenUsage = toTokenUsage(usage?.input_tokens, usage?.output_tokens);
+                if (tokenUsage) {
+                  hasUsage = true;
+                  yield { type: 'usage', data: tokenUsage };
+                }
+              }
 
               if (parsed.type === 'content_block_delta') {
                 const content = parsed.delta?.text;

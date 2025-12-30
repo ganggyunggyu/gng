@@ -6,6 +6,9 @@ export const ImageModel = {
   DALLE_3: 'dall-e-3', // $0.040/장 (1024x1024 standard)
   DALLE_2: 'dall-e-2', // $0.016/장 (256x256) ~ $0.020/장 (1024x1024) 저렴!
 
+  // Gemini Flash Image
+  GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
+
   // Google Imagen ($0.03/장)
   IMAGEN_3: 'imagen-3.0-generate-002', // 고품질
   IMAGEN_3_FAST: 'imagen-3.0-fast-generate-001', // 빠름
@@ -19,9 +22,11 @@ export const ImageModel = {
 export const CURRENT_IMAGE_MODEL = ImageModel.IMAGEN_4;
 
 // 이미지 모델별 설정
+export type ImageProvider = 'openai' | 'gemini' | 'gemini-flash' | 'xai';
+
 export const IMAGE_MODEL_CONFIG: Record<
   string,
-  { provider: 'openai' | 'gemini' | 'xai'; endpoint: string; apiKeyEnv: string }
+  { provider: ImageProvider; endpoint: string; apiKeyEnv: string }
 > = {
   [ImageModel.DALLE_3]: {
     provider: 'openai',
@@ -32,6 +37,12 @@ export const IMAGE_MODEL_CONFIG: Record<
     provider: 'openai',
     endpoint: 'https://api.openai.com/v1/images/generations',
     apiKeyEnv: 'OPENAI_API_KEY',
+  },
+  [ImageModel.GEMINI_2_5_FLASH_IMAGE]: {
+    provider: 'gemini-flash',
+    endpoint:
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent',
+    apiKeyEnv: 'GEMINI_API_KEY',
   },
   [ImageModel.IMAGEN_3]: {
     provider: 'gemini',
@@ -58,10 +69,28 @@ export const IMAGE_MODEL_CONFIG: Record<
   },
 };
 
+export const IMAGE_MODEL_COST_USD: Record<string, number> = {
+  [ImageModel.DALLE_3]: 0.04,
+  [ImageModel.DALLE_2]: 0.02,
+  [ImageModel.GEMINI_2_5_FLASH_IMAGE]: 0.039,
+  [ImageModel.IMAGEN_3]: 0.03,
+  [ImageModel.IMAGEN_3_FAST]: 0.03,
+  [ImageModel.IMAGEN_4]: 0.04,
+  [ImageModel.GROK_IMAGE]: 0.07,
+};
+
 // ============================================================
 // AI 모델 상수 정의
 // ============================================================
 export const Model = {
+  // OpenAI GPT-5 시리즈 (Responses API)
+  GPT5: 'gpt-5-2025-08-07',
+  GPT5_1: 'gpt-5.1-2025-11-13',
+  GPT5_2: 'gpt-5.2-2025-12-11',
+  GPT5_MINI: 'gpt-5-mini-2025-08-07',
+  GPT5_NANO: 'gpt-5-nano-2025-08-07',
+  GPT5_CHAT: 'gpt-5-chat-latest',
+
   // OpenAI GPT-4.1 시리즈 (2025-04-14)
   GPT4_1: 'gpt-4.1-2025-04-14',
   GPT4_1_MINI: 'gpt-4.1-mini-2025-04-14',
@@ -73,6 +102,8 @@ export const Model = {
   GPT4O_MINI: 'gpt-4o-mini',
 
   // Google Gemini
+  GEMINI_2_5_PRO: 'gemini-2.5-pro',
+  GEMINI_2_5_FLASH_IMAGE: 'gemini-2.5-flash-image',
   GEMINI_3_PRO: 'gemini-3-pro-preview',
   GEMINI_3_FLASH: 'gemini-3-flash-preview',
   GEMINI_2_FLASH: 'gemini-2.0-flash',
@@ -116,7 +147,7 @@ export type Provider =
   | 'solar';
 
 // 모델에서 Provider 자동 추출
-export function getProviderFromModel(model: string): Provider {
+export const getProviderFromModel = (model: string): Provider => {
   if (model.startsWith('gpt-') || model.startsWith('chatgpt-')) return 'openai';
   if (model.startsWith('claude-')) return 'anthropic';
   if (model.startsWith('gemini-') || model.startsWith('imagen-'))
@@ -125,11 +156,17 @@ export function getProviderFromModel(model: string): Provider {
   if (model.startsWith('deepseek-')) return 'deepseek';
   if (model.startsWith('solar-')) return 'solar';
   throw new Error(`Unknown model provider for: ${model}`);
-}
+};
 
 // Provider별 모델 목록
 export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
   openai: [
+    Model.GPT5,
+    Model.GPT5_1,
+    Model.GPT5_2,
+    Model.GPT5_MINI,
+    Model.GPT5_NANO,
+    Model.GPT5_CHAT,
     Model.GPT4_1,
     Model.GPT4_1_MINI,
     Model.GPT4_1_NANO,
@@ -144,7 +181,13 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
     Model.CLAUDE_HAIKU_3_5,
     Model.CLAUDE_OPUS_3,
   ],
-  gemini: [Model.GEMINI_3_PRO, Model.GEMINI_3_FLASH, Model.GEMINI_2_FLASH],
+  gemini: [
+    Model.GEMINI_2_5_PRO,
+    Model.GEMINI_2_5_FLASH_IMAGE,
+    Model.GEMINI_3_PRO,
+    Model.GEMINI_3_FLASH,
+    Model.GEMINI_2_FLASH,
+  ],
   xai: [
     Model.GROK_4,
     Model.GROK_4_FAST,
@@ -156,11 +199,18 @@ export const MODELS_BY_PROVIDER: Record<Provider, string[]> = {
     Model.GROK_IMAGE,
   ],
   deepseek: [Model.DEEPSEEK_CHAT, Model.DEEPSEEK_RES],
-  solar: [], // 크레딧 부족으로 비활성화
+  solar: [Model.SOLAR_PRO, Model.SOLAR_PRO2],
 };
 
 // 모델 표시명 (UI용)
 export const MODEL_DISPLAY_NAMES: Record<string, string> = {
+  // OpenAI GPT-5
+  [Model.GPT5]: 'GPT-5',
+  [Model.GPT5_1]: 'GPT-5.1',
+  [Model.GPT5_2]: 'GPT-5.2',
+  [Model.GPT5_MINI]: 'GPT-5 Mini',
+  [Model.GPT5_NANO]: 'GPT-5 Nano',
+  [Model.GPT5_CHAT]: 'GPT-5 Chat',
   // OpenAI GPT-4.1
   [Model.GPT4_1]: 'GPT-4.1',
   [Model.GPT4_1_MINI]: 'GPT-4.1 Mini',
@@ -176,8 +226,10 @@ export const MODEL_DISPLAY_NAMES: Record<string, string> = {
   [Model.CLAUDE_HAIKU_3_5]: 'Claude Haiku 3.5',
   [Model.CLAUDE_OPUS_3]: 'Claude Opus 3',
   // Gemini
+  [Model.GEMINI_2_5_PRO]: 'Gemini 2.5 Pro',
+  [Model.GEMINI_2_5_FLASH_IMAGE]: 'Gemini 2.5 Flash Image',
   [Model.GEMINI_3_PRO]: 'Gemini 3 Pro',
-  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash',
+  [Model.GEMINI_3_FLASH]: 'Gemini 3 Flash Preview',
   [Model.GEMINI_2_FLASH]: 'Gemini 2 Flash',
   [Model.IMAGEN_4]: 'Imagen 4',
   // xAI
@@ -198,9 +250,9 @@ export const MODEL_DISPLAY_NAMES: Record<string, string> = {
 };
 
 // 모델명으로 표시명 가져오기
-export function getModelDisplayName(modelName: string): string {
+export const getModelDisplayName = (modelName: string): string => {
   return MODEL_DISPLAY_NAMES[modelName] || modelName;
-}
+};
 
 // Provider별 API 설정
 export const PROVIDER_CONFIG: Record<

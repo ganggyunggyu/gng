@@ -1,6 +1,6 @@
-import type { ProviderAdapter, ChatParams } from '../types';
-import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from '../types';
+import type { InternalStreamEvent, TokenUsage } from '@/shared/types';
+import type { ChatParams, ProviderAdapter } from '@/shared/providers/types';
+import { createSSEStream } from '@/shared/providers/types';
 
 export const openaiAdapter: ProviderAdapter = {
   name: 'openai',
@@ -11,25 +11,53 @@ export const openaiAdapter: ProviderAdapter = {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
+    const { modelName, temperature, maxTokens } = modelConfig;
+    const normalizedModelName = modelName.toLowerCase();
+    const isResponseApiModel =
+      normalizedModelName.startsWith('gpt-5') && !normalizedModelName.includes('chat');
+    const isTemperatureSupported =
+      !isResponseApiModel ||
+      (!normalizedModelName.includes('nano') && !normalizedModelName.includes('mini'));
+
     const formattedMessages = systemPrompt
       ? [{ role: 'system' as const, content: systemPrompt }, ...messages]
       : messages;
+    const inputMessages = messages.map(({ role, content }) => ({ role, content }));
 
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+    const response = await fetch(
+      isResponseApiModel
+        ? 'https://api.openai.com/v1/responses'
+        : 'https://api.openai.com/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(
+          isResponseApiModel
+            ? {
+                model: modelName,
+                input: inputMessages,
+                ...(systemPrompt ? { instructions: systemPrompt } : {}),
+                ...(isTemperatureSupported && { temperature: temperature ?? 0.7 }),
+                ...(maxTokens && { max_output_tokens: maxTokens }),
+                stream: true,
+              }
+            : {
+                model: modelName,
+                messages: formattedMessages,
+                temperature: temperature ?? 0.7,
+                ...(maxTokens && {
+                  max_completion_tokens: maxTokens,
+                }),
+                stream_options: { include_usage: true },
+                stream: true,
+              },
+        ),
+        signal,
       },
-      body: JSON.stringify({
-        model: modelConfig.modelName,
-        messages: formattedMessages,
-        temperature: modelConfig.temperature ?? 0.7,
-        ...(modelConfig.maxTokens && { max_completion_tokens: modelConfig.maxTokens }),
-        stream: true,
-      }),
-      signal,
-    });
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -40,6 +68,13 @@ export const openaiAdapter: ProviderAdapter = {
     if (!reader) {
       throw new Error('No response body');
     }
+
+    const toTokenUsage = (tokensIn?: number, tokensOut?: number): TokenUsage | null => {
+      const normalizedTokensIn = tokensIn ?? 0;
+      const normalizedTokensOut = tokensOut ?? 0;
+      if (!normalizedTokensIn && !normalizedTokensOut) return null;
+      return { tokensIn: normalizedTokensIn, tokensOut: normalizedTokensOut };
+    };
 
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
       const decoder = new TextDecoder();
@@ -66,9 +101,38 @@ export const openaiAdapter: ProviderAdapter = {
 
             try {
               const parsed = JSON.parse(data);
-              const content = parsed.choices?.[0]?.delta?.content;
-              if (content) {
-                yield { type: 'delta', data: content };
+              if (isResponseApiModel) {
+                const { type, delta } = parsed;
+                if (type === 'response.output_text.delta' && typeof delta === 'string') {
+                  yield { type: 'delta', data: delta };
+                  continue;
+                }
+                if (type === 'response.completed' || type === 'response.done') {
+                  const usage = parsed.response?.usage;
+                  const tokenUsage = toTokenUsage(usage?.input_tokens, usage?.output_tokens);
+                  if (tokenUsage) {
+                    yield { type: 'usage', data: tokenUsage };
+                  }
+                  yield { type: 'done', data: '' };
+                  return;
+                }
+                if (type === 'error' || type === 'response.error') {
+                  yield {
+                    type: 'error',
+                    data: { error: parsed.error?.message || 'Unknown error' },
+                  };
+                  return;
+                }
+              } else {
+                const usage = parsed.usage;
+                const tokenUsage = toTokenUsage(usage?.prompt_tokens, usage?.completion_tokens);
+                if (tokenUsage) {
+                  yield { type: 'usage', data: tokenUsage };
+                }
+                const content = parsed.choices?.[0]?.delta?.content;
+                if (content) {
+                  yield { type: 'delta', data: content };
+                }
               }
             } catch {
               // Skip invalid JSON

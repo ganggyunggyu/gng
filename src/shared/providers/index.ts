@@ -1,32 +1,5 @@
-import type { Provider } from '@/shared/types';
-import type { ProviderAdapter } from './types';
-import {
-  openaiAdapter,
-  anthropicAdapter,
-  geminiAdapter,
-  xaiAdapter,
-  deepseekAdapter,
-  solarAdapter,
-} from './adapters';
-
-const adapters: Record<Provider, ProviderAdapter> = {
-  openai: openaiAdapter,
-  anthropic: anthropicAdapter,
-  xai: xaiAdapter,
-  gemini: geminiAdapter,
-  deepseek: deepseekAdapter,
-  solar: solarAdapter,
-};
-
-export function getAdapter(provider: Provider): ProviderAdapter {
-  const adapter = adapters[provider];
-  if (!adapter) {
-    throw new Error(`Unknown provider: ${provider}`);
-  }
-  return adapter;
-}
-
-export { type ProviderAdapter, type ChatParams } from './types';
+export { getAdapter } from '@/shared/providers/get-adapter';
+export { type ProviderAdapter, type ChatParams } from '@/shared/providers/types';
 export {
   Model,
   MODELS_BY_PROVIDER,
@@ -37,5 +10,12 @@ export {
   CURRENT_IMAGE_MODEL,
   IMAGE_MODEL_CONFIG,
   type ModelName,
-} from './models';
-export { callAI, callAIStream, type CallAIParams, type CallAIResult } from './call-ai';
+} from '@/shared/providers/models';
+export {
+  callAI,
+  callAIStream,
+  type CallAIParams,
+  type CallAIResult,
+  type TokenCost,
+} from '@/shared/providers/call-ai';
+export { callImageAI } from '@/shared/providers/call-image-ai';

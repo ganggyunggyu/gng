@@ -18,14 +18,14 @@ export interface StreamChunk {
   error?: string;
 }
 
-export function encodeSSE(event: InternalStreamEvent): Uint8Array {
+export const encodeSSE = (event: InternalStreamEvent): Uint8Array => {
   const encoder = new TextEncoder();
   return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
-}
+};
 
-export function createSSEStream(
+export const createSSEStream = (
   generator: AsyncGenerator<InternalStreamEvent>,
-): ReadableStream<Uint8Array> {
+): ReadableStream<Uint8Array> => {
   return new ReadableStream({
     async pull(controller) {
       const { value, done } = await generator.next();
@@ -36,4 +36,4 @@ export function createSSEStream(
       controller.enqueue(encodeSSE(value));
     },
   });
-}
+};

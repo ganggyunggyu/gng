@@ -1,6 +1,6 @@
-import type { ProviderAdapter, ChatParams } from '../types';
-import type { InternalStreamEvent } from '@/shared/types';
-import { createSSEStream } from '../types';
+import type { InternalStreamEvent, TokenUsage } from '@/shared/types';
+import type { ChatParams, ProviderAdapter } from '@/shared/providers/types';
+import { createSSEStream } from '@/shared/providers/types';
 
 export const geminiAdapter: ProviderAdapter = {
   name: 'gemini',
@@ -11,13 +11,19 @@ export const geminiAdapter: ProviderAdapter = {
       throw new Error('GEMINI_API_KEY is not configured');
     }
 
+    const modelAliases: Record<string, string> = {
+      'gemini-3.0-flash': 'gemini-3-flash-preview',
+    };
+    const resolvedModelName =
+      modelAliases[modelConfig.modelName] ?? modelConfig.modelName;
+
     const contents = messages.map((m) => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     }));
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${modelConfig.modelName}:streamGenerateContent?key=${apiKey}&alt=sse`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${resolvedModelName}:streamGenerateContent?key=${apiKey}&alt=sse`,
       {
         method: 'POST',
         headers: {
@@ -45,9 +51,17 @@ export const geminiAdapter: ProviderAdapter = {
       throw new Error('No response body');
     }
 
+    const toTokenUsage = (tokensIn?: number, tokensOut?: number): TokenUsage | null => {
+      const normalizedTokensIn = tokensIn ?? 0;
+      const normalizedTokensOut = tokensOut ?? 0;
+      if (!normalizedTokensIn && !normalizedTokensOut) return null;
+      return { tokensIn: normalizedTokensIn, tokensOut: normalizedTokensOut };
+    };
+
     async function* streamGenerator(): AsyncGenerator<InternalStreamEvent> {
       const decoder = new TextDecoder();
       let buffer = '';
+      let hasUsage = false;
 
       try {
         while (true) {
@@ -67,6 +81,17 @@ export const geminiAdapter: ProviderAdapter = {
 
             try {
               const parsed = JSON.parse(data);
+              if (!hasUsage) {
+                const usage = parsed.usageMetadata;
+                const tokenUsage = toTokenUsage(
+                  usage?.promptTokenCount,
+                  usage?.candidatesTokenCount,
+                );
+                if (tokenUsage) {
+                  hasUsage = true;
+                  yield { type: 'usage', data: tokenUsage };
+                }
+              }
               const content = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
               if (content) {
                 yield { type: 'delta', data: content };
