@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import {
   Plus,
@@ -20,89 +20,44 @@ import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
 import { ScrollArea } from '@/shared/ui/scroll-area';
-import { Separator } from '@/shared/ui/separator';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/shared/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/shared/ui/alert-dialog';
-import { cn, formatShortcut } from '@/shared/lib';
-import { Model } from '@/shared/providers';
-import type { Provider } from '@/shared/types';
-import {
-  selectedProjectIdAtom,
-  selectedProjectAtom,
-  useProjects,
-} from '@/entities/project';
+import { cn } from '@/shared/lib';
+import { selectedProjectIdAtom, useProjects } from '@/entities/project';
 import {
   selectedThreadIdAtom,
   threadReadAtAtom,
   setThreadReadAtAtom,
   useThreads,
 } from '@/entities/thread';
-import { sidebarOpenAtom, projectDialogOpenAtom, settingsDialogOpenAtom } from '../model';
-import { ModelSelector, ProjectSettings } from '@/features/settings';
+import { sidebarOpenAtom, settingsDialogOpenAtom } from '@/features/sidebar/model';
+import { ProjectSettings } from '@/features/settings';
+import { NewProjectDialog } from '@/features/sidebar/ui/new-project-dialog';
+import { DeleteConfirmDialog } from '@/features/sidebar/ui/delete-confirm-dialog';
 
-export function Sidebar() {
+export const Sidebar = () => {
   const [sidebarOpen, setSidebarOpen] = useAtom(sidebarOpenAtom);
   const [selectedProjectId, setSelectedProjectId] = useAtom(selectedProjectIdAtom);
   const [selectedThreadId, setSelectedThreadId] = useAtom(selectedThreadIdAtom);
-  const selectedProject = useAtomValue(selectedProjectAtom);
   const threadReadAtById = useAtomValue(threadReadAtAtom);
   const setThreadReadAt = useSetAtom(setThreadReadAtAtom);
 
-  const { projects, createProject, deleteProject } = useProjects();
-  const { threads, createThread, deleteThread, deleteThreads, deleteAllThreads } = useThreads();
+  const { projects, deleteProject } = useProjects();
+  const { threads, createThread, deleteThread, deleteThreads } = useThreads();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedThreadIds, setSelectedThreadIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-
-  const [newProjectName, setNewProjectName] = useState('');
-  const [newProjectModel, setNewProjectModel] = useState<string>(Model.GPT4O);
-  const [newProjectProvider, setNewProjectProvider] = useState<Provider>('openai');
-  const [projectDialogOpen, setProjectDialogOpen] = useAtom(projectDialogOpenAtom);
   const [settingsOpen, setSettingsOpen] = useAtom(settingsDialogOpenAtom);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredProjects = projects.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
-
-  const handleCreateProject = async () => {
-    if (!newProjectName.trim()) return;
-    await createProject(newProjectName.trim(), {
-      provider: newProjectProvider,
-      modelName: newProjectModel,
-    });
-    setNewProjectName('');
-    setNewProjectModel(Model.GPT4O);
-    setNewProjectProvider('openai');
-    setProjectDialogOpen(false);
-  };
-
-  const handleModelChange = (model: string, provider: Provider) => {
-    setNewProjectModel(model);
-    setNewProjectProvider(provider);
-  };
 
   const handleCreateThread = async () => {
     await createThread();
@@ -175,11 +130,11 @@ export function Sidebar() {
   };
 
   return (
-    <>
+    <React.Fragment>
       {/* Mobile overlay backdrop */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className={cn("fixed inset-0 z-40 bg-black/50 md:hidden")}
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -192,321 +147,283 @@ export function Sidebar() {
           sidebarOpen ? 'w-72 border-r' : 'w-0 border-r-0',
         )}
       >
-        <div className="flex h-full w-72 flex-col">
-        <div className="flex h-14 items-center justify-between border-b px-4">
-        <h1 className="text-xl font-bold font-(family-name:--font-space-grotesk)">Gng</h1>
-        <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
-          <PanelLeftClose className="h-4 w-4" />
-        </Button>
-      </div>
+        <div className={cn('flex h-full w-72 flex-col')}>
+          <div className={cn('flex h-14 items-center justify-between border-b px-4')}>
+            <h1 className={cn('text-xl font-bold font-(family-name:--font-space-grotesk)')}>
+              Gng
+            </h1>
+            <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)}>
+              <PanelLeftClose className={cn('h-4 w-4')} />
+            </Button>
+          </div>
 
-      <div className="flex flex-col gap-2 p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">Projects</span>
-          <Dialog open={projectDialogOpen} onOpenChange={setProjectDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-6 w-6">
-                <Plus className="h-3 w-3" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New Project</DialogTitle>
-              </DialogHeader>
-              <div className="flex flex-col gap-4 pt-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Project Name</label>
-                  <Input
-                    placeholder="My awesome project"
-                    value={newProjectName}
-                    onChange={(e) => setNewProjectName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.nativeEvent.isComposing) return;
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleCreateProject();
-                      }
-                    }}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Model</label>
-                  <ModelSelector
-                    value={newProjectModel}
-                    onChange={handleModelChange}
-                  />
-                </div>
-                <Button onClick={handleCreateProject} disabled={!newProjectName.trim()}>
-                  Create Project
-                </Button>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search projects..."
-            className="h-8 pl-7 text-sm"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-      </div>
+          <div className={cn('flex flex-col gap-2 p-4')}>
+            <div className={cn('flex items-center justify-between')}>
+              <span className={cn('text-sm font-medium text-muted-foreground')}>Projects</span>
+              <NewProjectDialog />
+            </div>
+            <div className={cn('relative')}>
+              <Search
+                className={cn(
+                  'absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground',
+                )}
+              />
+              <Input
+                placeholder="Search projects..."
+                className={cn('h-8 pl-7 text-sm')}
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
 
-      <ScrollArea className="flex-1 px-2">
-        <div className="space-y-1 pb-4">
-          {filteredProjects.length === 0 ? (
-            <p className="px-2 py-4 text-center text-sm text-muted-foreground">
-              {projects.length === 0 ? 'No projects yet' : 'No matching projects'}
-            </p>
-          ) : (
-            filteredProjects.map((project) => {
-              const isSelected = selectedProjectId === project.id;
-              return (
-                <div key={project.id} className="space-y-0.5">
-                  {/* Project Item */}
-                  <div
-                    className={cn(
-                      'group/project flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
-                      isSelected && 'bg-sidebar-accent',
-                    )}
-                  >
-                    <button
-                      onClick={() => setSelectedProjectId(isSelected ? null : project.id)}
-                      className="flex flex-1 min-w-0 items-center gap-2 text-sm font-medium"
-                    >
-                      <ChevronRight
+          <ScrollArea className={cn('flex-1 px-2')}>
+            <div className={cn('space-y-1 pb-4')}>
+              {filteredProjects.length === 0 ? (
+                <p className={cn('px-2 py-4 text-center text-sm text-muted-foreground')}>
+                  {projects.length === 0 ? 'No projects yet' : 'No matching projects'}
+                </p>
+              ) : (
+                filteredProjects.map((project) => {
+                  const isSelected = selectedProjectId === project.id;
+                  return (
+                    <div key={project.id} className={cn('space-y-0.5')}>
+                      <div
                         className={cn(
-                          'h-3 w-3 text-muted-foreground transition-transform duration-200',
-                          isSelected && 'rotate-90',
+                          'group/project flex items-center justify-between rounded-md px-2 py-2 transition-colors hover:bg-sidebar-accent',
+                          isSelected && 'bg-sidebar-accent',
                         )}
-                      />
-                      {isSelected ? (
-                        <FolderOpen className="h-4 w-4 text-primary" />
-                      ) : (
-                        <FolderClosed className="h-4 w-4" />
-                      )}
-                      <span className="truncate">{project.name}</span>
-                    </button>
-                    <div className="flex shrink-0 items-center gap-1">
-                      {isSelected && !isEditMode && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCreateThread();
-                            }}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
-                          {threads.length > 0 && (
+                      >
+                        <button
+                          onClick={() => setSelectedProjectId(isSelected ? null : project.id)}
+                          className={cn(
+                            'flex flex-1 min-w-0 items-center gap-2 text-sm font-medium',
+                          )}
+                        >
+                          <ChevronRight
+                            className={cn(
+                              'h-3 w-3 text-muted-foreground transition-transform duration-200',
+                              isSelected && 'rotate-90',
+                            )}
+                          />
+                          {isSelected ? (
+                            <FolderOpen className={cn('h-4 w-4 text-primary')} />
+                          ) : (
+                            <FolderClosed className={cn('h-4 w-4')} />
+                          )}
+                          <span className={cn('truncate')}>{project.name}</span>
+                        </button>
+                        <div className={cn('flex shrink-0 items-center gap-1')}>
+                          {isSelected && !isEditMode && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn('h-6 w-6')}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCreateThread();
+                                }}
+                              >
+                                <Plus className={cn('h-3 w-3')} />
+                              </Button>
+                              {threads.length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={cn('h-6 w-6')}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsEditMode(true);
+                                  }}
+                                >
+                                  <Pencil className={cn('h-3 w-3')} />
+                                </Button>
+                              )}
+                            </>
+                          )}
+                          {isSelected && isEditMode && (
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className={cn('h-6 w-6')}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setIsEditMode(true);
+                                exitEditMode();
                               }}
                             >
-                              <Pencil className="h-3 w-3" />
+                              <X className={cn('h-3 w-3')} />
                             </Button>
                           )}
-                        </>
-                      )}
-                      {isSelected && isEditMode && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            exitEditMode();
-                          }}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover/project:opacity-100"
-                          >
-                            <MoreHorizontal className="h-3 w-3" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {isSelected && (
-                            <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
-                              <Settings className="mr-2 h-4 w-4" />
-                              Settings
-                            </DropdownMenuItem>
-                          )}
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => deleteProject(project.id)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Project
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-
-                  {/* Threads (Accordion Content) */}
-                  <div
-                    className={cn(
-                      'overflow-hidden transition-all duration-200 ease-in-out',
-                      isSelected ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0',
-                    )}
-                  >
-                    <div className="ml-4 space-y-0.5 border-l border-border pl-2">
-                      {threads.length === 0 ? (
-                        <p className="py-2 text-xs text-muted-foreground">
-                          No chats yet
-                        </p>
-                      ) : (
-                        threads.map((thread) => {
-                          const { id, title, updatedAt } = thread;
-                          const isThreadSelected = selectedThreadId === id;
-                          const isChecked = selectedThreadIds.has(id);
-                          const lastReadAt = threadReadAtById[id];
-                          const updatedAtMs = new Date(updatedAt).getTime();
-                          const hasUnread =
-                            !isThreadSelected &&
-                            lastReadAt !== undefined &&
-                            updatedAtMs > lastReadAt;
-
-                          return (
-                            <div
-                              key={id}
-                              className={cn(
-                                'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
-                                isThreadSelected && !isEditMode && 'bg-sidebar-accent',
-                                isEditMode && isChecked && 'bg-destructive/10',
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={cn(
+                                  'h-6 w-6 opacity-0 group-hover/project:opacity-100',
+                                )}
+                              >
+                                <MoreHorizontal className={cn('h-3 w-3')} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {isSelected && (
+                                <DropdownMenuItem onClick={() => setSettingsOpen(true)}>
+                                  <Settings className={cn('mr-2 h-4 w-4')} />
+                                  Settings
+                                </DropdownMenuItem>
                               )}
-                            >
-                              {isEditMode ? (
+                              <DropdownMenuItem
+                                className={cn('text-destructive')}
+                                onClick={() => deleteProject(project.id)}
+                              >
+                                <Trash2 className={cn('mr-2 h-4 w-4')} />
+                                Delete Project
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                      </div>
+
+                      <div
+                        className={cn(
+                          'overflow-hidden transition-all duration-200 ease-in-out',
+                          isSelected ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0',
+                        )}
+                      >
+                        <div className={cn('ml-4 space-y-0.5 border-l border-border pl-2')}>
+                          {threads.length === 0 ? (
+                            <p className={cn('py-2 text-xs text-muted-foreground')}>
+                              No chats yet
+                            </p>
+                          ) : (
+                            threads.map((thread) => {
+                              const { id, title, updatedAt } = thread;
+                              const isThreadSelected = selectedThreadId === id;
+                              const isChecked = selectedThreadIds.has(id);
+                              const lastReadAt = threadReadAtById[id];
+                              const updatedAtMs = new Date(updatedAt).getTime();
+                              const hasUnread =
+                                !isThreadSelected &&
+                                lastReadAt !== undefined &&
+                                updatedAtMs > lastReadAt;
+
+                              return (
                                 <div
-                                  onClick={() => toggleThreadSelection(id)}
-                                  className="flex flex-1 min-w-0 cursor-pointer items-center gap-2 text-sm"
+                                  key={id}
+                                  className={cn(
+                                    'group/thread flex items-center justify-between rounded-md px-2 py-1.5 transition-colors hover:bg-sidebar-accent',
+                                    isThreadSelected && !isEditMode && 'bg-sidebar-accent',
+                                    isEditMode && isChecked && 'bg-destructive/10',
+                                  )}
                                 >
-                                  <Checkbox
-                                    checked={isChecked}
-                                    className="h-3.5 w-3.5"
-                                    onClick={(e) => e.stopPropagation()}
-                                    onCheckedChange={() => toggleThreadSelection(id)}
-                                  />
-                                  <span className="min-w-0 line-clamp-1">{title}</span>
-                                </div>
-                              ) : (
-                                <>
-                                  <button
-                                    onClick={() => handleSelectThread(id)}
-                                    className="flex flex-1 min-w-0 items-center gap-2 text-sm"
-                                  >
-                                    <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                                    <span className="min-w-0 line-clamp-1">{title}</span>
-                                  </button>
-                                  <div className={cn('flex items-center gap-1')}>
-                                    {hasUnread && (
-                                      <span
-                                        className={cn('h-4 w-1 rounded-full bg-blue-500')}
-                                        aria-hidden="true"
+                                  {isEditMode ? (
+                                    <div
+                                      onClick={() => toggleThreadSelection(id)}
+                                      className={cn(
+                                        'flex flex-1 min-w-0 cursor-pointer items-center gap-2 text-sm',
+                                      )}
+                                    >
+                                      <Checkbox
+                                        checked={isChecked}
+                                        className={cn('h-3.5 w-3.5')}
+                                        onClick={(e) => e.stopPropagation()}
+                                        onCheckedChange={() => toggleThreadSelection(id)}
                                       />
-                                    )}
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-5 w-5 opacity-0 group-hover/thread:opacity-100"
-                                        >
-                                          <MoreHorizontal className="h-3 w-3" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuItem
-                                          className="text-destructive"
-                                          onClick={() => deleteThread(id)}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                          );
-                        })
-                      )}
+                                      <span className={cn('min-w-0 line-clamp-1')}>{title}</span>
+                                    </div>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => handleSelectThread(id)}
+                                        className={cn(
+                                          'flex flex-1 min-w-0 items-center gap-2 text-sm',
+                                        )}
+                                      >
+                                        <MessageSquare className={cn('h-3.5 w-3.5 shrink-0')} />
+                                        <span className={cn('min-w-0 line-clamp-1')}>{title}</span>
+                                      </button>
+                                      <div className={cn('flex items-center gap-1')}>
+                                        {hasUnread && (
+                                          <span
+                                            className={cn('h-4 w-1 rounded-full bg-blue-500')}
+                                            aria-hidden="true"
+                                          />
+                                        )}
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className={cn(
+                                                'h-5 w-5 opacity-0 group-hover/thread:opacity-100',
+                                              )}
+                                            >
+                                              <MoreHorizontal className={cn('h-3 w-3')} />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent align="end">
+                                            <DropdownMenuItem
+                                              className={cn('text-destructive')}
+                                              onClick={() => deleteThread(id)}
+                                            >
+                                              <Trash2 className={cn('mr-2 h-4 w-4')} />
+                                              Delete
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              );
-            })
+                  );
+                })
+              )}
+            </div>
+          </ScrollArea>
+
+          <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+          {isEditMode && threads.length > 0 && (
+            <div className={cn('border-t p-3')}>
+              <div className={cn('flex items-center justify-between gap-2')}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className={cn('flex-1')}
+                  onClick={toggleSelectAll}
+                >
+                  {selectedThreadIds.size === threads.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className={cn('flex-1')}
+                  disabled={selectedThreadIds.size === 0}
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className={cn('mr-1 h-3 w-3')} />
+                  Delete ({selectedThreadIds.size})
+                </Button>
+              </div>
+            </div>
           )}
         </div>
-      </ScrollArea>
+      </aside>
 
-      <ProjectSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
-
-      {isEditMode && threads.length > 0 && (
-        <div className="border-t p-3">
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1"
-              onClick={toggleSelectAll}
-            >
-              {selectedThreadIds.size === threads.length ? 'Deselect All' : 'Select All'}
-            </Button>
-            <Button
-              variant="destructive"
-              size="sm"
-              className="flex-1"
-              disabled={selectedThreadIds.size === 0}
-              onClick={() => setDeleteDialogOpen(true)}
-            >
-              <Trash2 className="mr-1 h-3 w-3" />
-              Delete ({selectedThreadIds.size})
-            </Button>
-          </div>
-        </div>
-      )}
-      </div>
-    </aside>
-
-    <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Delete Selected Chats</AlertDialogTitle>
-          <AlertDialogDescription>
-            Are you sure you want to delete {selectedThreadIds.size} selected chat{selectedThreadIds.size > 1 ? 's' : ''}?
-            This action cannot be undone.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={handleDeleteSelected}
-          >
-            Delete
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-    </>
+    <DeleteConfirmDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      count={selectedThreadIds.size}
+      onConfirm={handleDeleteSelected}
+    />
+    </React.Fragment>
   );
-}
+};
