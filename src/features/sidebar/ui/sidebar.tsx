@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { useLiveQuery } from 'dexie-react-hooks';
 import {
   Plus,
   Settings,
@@ -27,6 +28,7 @@ import {
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
 import { cn } from '@/shared/lib';
+import { db } from '@/shared/db';
 import { selectedProjectIdAtom, useProjects } from '@/entities/project';
 import {
   selectedThreadIdAtom,
@@ -55,9 +57,57 @@ export const Sidebar = () => {
   const [settingsOpen, setSettingsOpen] = useAtom(settingsDialogOpenAtom);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredProjects = projects.filter((p) =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()),
+  // 전체 스레드 검색 (제목 + 메시지 내용)
+  const allThreads = useLiveQuery(
+    async () => {
+      if (!searchQuery.trim()) return [];
+      const query = searchQuery.toLowerCase();
+
+      // 제목 검색
+      const titleMatches = await db.threads.filter((thread) =>
+        thread.title.toLowerCase().includes(query),
+      ).toArray();
+
+      // 메시지 내용 검색
+      const messageMatches = await db.messages.filter((msg) =>
+        msg.content.toLowerCase().includes(query),
+      ).toArray();
+
+      // 메시지가 매칭된 스레드 ID 수집
+      const messageThreadIds = new Set(messageMatches.map((m) => m.threadId));
+
+      // 제목 매칭된 스레드 ID
+      const titleThreadIds = new Set(titleMatches.map((t) => t.id));
+
+      // 메시지에서만 매칭된 스레드 추가 로드
+      const additionalThreadIds = [...messageThreadIds].filter((id) => !titleThreadIds.has(id));
+      const additionalThreads = additionalThreadIds.length > 0
+        ? await db.threads.where('id').anyOf(additionalThreadIds).toArray()
+        : [];
+
+      return [...titleMatches, ...additionalThreads];
+    },
+    [searchQuery],
   );
+
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim() || !allThreads?.length) return null;
+    const grouped = new Map<string, typeof allThreads>();
+    for (const thread of allThreads) {
+      const projectThreads = grouped.get(thread.projectId) ?? [];
+      projectThreads.push(thread);
+      grouped.set(thread.projectId, projectThreads);
+    }
+    return grouped;
+  }, [searchQuery, allThreads]);
+
+  const isSearchMode = searchQuery.trim().length > 0;
+
+  const filteredProjects = projects.filter((p) => {
+    if (!isSearchMode) return true;
+    return p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      searchResults?.has(p.id);
+  });
 
   const handleCreateThread = async () => {
     await createThread();
@@ -169,7 +219,7 @@ export const Sidebar = () => {
                 )}
               />
               <Input
-                placeholder="Search projects..."
+                placeholder="Search projects & chats..."
                 className={cn('h-8 pl-7 text-sm')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -186,6 +236,10 @@ export const Sidebar = () => {
               ) : (
                 filteredProjects.map((project) => {
                   const isSelected = selectedProjectId === project.id;
+                  const isExpanded = isSelected || (isSearchMode && searchResults?.has(project.id));
+                  const displayThreads = isSearchMode && searchResults?.has(project.id)
+                    ? searchResults.get(project.id) ?? []
+                    : threads;
                   return (
                     <div key={project.id} className={cn('space-y-0.5')}>
                       <div
@@ -289,16 +343,16 @@ export const Sidebar = () => {
                       <div
                         className={cn(
                           'overflow-hidden transition-all duration-200 ease-in-out',
-                          isSelected ? 'max-h-125 opacity-100' : 'max-h-0 opacity-0',
+                          isExpanded ? 'max-h-[60vh] opacity-100' : 'max-h-0 opacity-0',
                         )}
                       >
-                        <div className={cn('ml-4 space-y-0.5 border-l border-border pl-2')}>
-                          {threads.length === 0 ? (
+                        <div className={cn('ml-4 space-y-0.5 border-l border-border pl-2 max-h-[55vh] overflow-y-auto scrollbar-hide')}>
+                          {displayThreads.length === 0 ? (
                             <p className={cn('py-2 text-xs text-muted-foreground')}>
                               No chats yet
                             </p>
                           ) : (
-                            threads.map((thread) => {
+                            displayThreads.map((thread) => {
                               const { id, title, updatedAt } = thread;
                               const isThreadSelected = selectedThreadId === id;
                               const isChecked = selectedThreadIds.has(id);
