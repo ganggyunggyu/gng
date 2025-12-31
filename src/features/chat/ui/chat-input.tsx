@@ -179,7 +179,7 @@ export const ChatInput = () => {
                     : 'Type a message...'
               }
               disabled={!selectedThread || isStreaming}
-              className={cn('min-h-10 resize-none border-0 focus-visible:ring-0')}
+              className={cn('min-h-10 max-h-[33vh] resize-none overflow-y-auto border-0 focus-visible:ring-0')}
               rows={1}
             />
 

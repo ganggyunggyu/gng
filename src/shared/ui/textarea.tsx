@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import { useState, useCallback, forwardRef } from 'react';
 import { cn } from '@/shared/lib';
