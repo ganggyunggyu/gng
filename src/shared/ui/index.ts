@@ -52,3 +52,4 @@ export {
   TooltipProvider,
   TooltipTrigger,
 } from './tooltip';
+export { Toaster } from './sonner';

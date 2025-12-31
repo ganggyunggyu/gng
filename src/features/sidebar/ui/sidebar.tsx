@@ -17,6 +17,7 @@ import {
   Pencil,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/shared/ui/button';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { Input } from '@/shared/ui/input';
@@ -175,7 +176,9 @@ export const Sidebar = () => {
   };
 
   const handleDeleteSelected = async () => {
+    const count = selectedThreadIds.size;
     await deleteThreads(Array.from(selectedThreadIds));
+    toast.success(`${count}개 스레드 삭제됨`);
     exitEditMode();
   };
 

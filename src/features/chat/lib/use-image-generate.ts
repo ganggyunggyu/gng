@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import axios from 'axios';
+import { toast } from 'sonner';
 import { setStreamingStateAtom } from '@/entities/message';
 import { selectedThreadAtom, useThreads } from '@/entities/thread';
 import { selectedProjectAtom } from '@/entities/project';
@@ -80,6 +81,7 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
         });
       } catch (error) {
         if (axios.isCancel(error)) {
+          toast.info('Image generation stopped');
           await addMessage({
             threadId,
             role: 'assistant',
@@ -91,6 +93,7 @@ export const useImageGenerate = ({ messages, addMessage }: UseImageGenerateParam
           const errorMessage = axios.isAxiosError(error)
             ? error.response?.data?.error || error.message
             : (error as Error).message;
+          toast.error(`Image generation failed: ${errorMessage}`);
           await addMessage({
             threadId,
             role: 'assistant',

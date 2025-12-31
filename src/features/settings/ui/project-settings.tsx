@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAtomValue } from 'jotai';
+import { toast } from 'sonner';
 import {
   Dialog,
   DialogContent,
@@ -58,23 +59,27 @@ export const ProjectSettings = ({ open, onOpenChange }: ProjectSettingsProps) =>
   const handleSave = async () => {
     if (!selectedProject) return;
 
-    await updateProject(selectedProject.id, {
-      name,
-      modelConfig: {
-        provider,
-        modelName: model,
-        temperature,
-        maxTokens,
-      },
-    });
+    try {
+      await updateProject(selectedProject.id, {
+        name,
+        modelConfig: {
+          provider,
+          modelName: model,
+          temperature,
+          maxTokens,
+        },
+      });
 
-    // systemPrompt가 변경되었으면 새 버전 생성
-    const currentSystemBase = currentPromptVersion?.layers.systemBase || '';
-    if (systemPrompt !== currentSystemBase) {
-      await updatePromptLayers({ systemBase: systemPrompt });
+      const currentSystemBase = currentPromptVersion?.layers.systemBase || '';
+      if (systemPrompt !== currentSystemBase) {
+        await updatePromptLayers({ systemBase: systemPrompt });
+      }
+
+      toast.success('Settings saved');
+      onOpenChange(false);
+    } catch {
+      toast.error('Failed to save settings');
     }
-
-    onOpenChange(false);
   };
 
   if (!selectedProject) return null;
