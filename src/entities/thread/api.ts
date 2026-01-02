@@ -106,6 +106,29 @@ export const useThreads = () => {
     });
   }, []);
 
+  const archiveThread = useCallback(async (threadId: string) => {
+    await db.threads.update(threadId, { isArchived: true, updatedAt: new Date() });
+    if (selectedThreadId === threadId) {
+      setSelectedThreadId(null);
+    }
+  }, [selectedThreadId, setSelectedThreadId]);
+
+  const unarchiveThread = useCallback(async (threadId: string) => {
+    await db.threads.update(threadId, { isArchived: false, updatedAt: new Date() });
+  }, []);
+
+  const archiveThreads = useCallback(async (threadIds: string[]) => {
+    if (threadIds.length === 0) return;
+    await db.transaction('rw', db.threads, async () => {
+      for (const threadId of threadIds) {
+        await db.threads.update(threadId, { isArchived: true, updatedAt: new Date() });
+      }
+    });
+    if (selectedThreadId && threadIds.includes(selectedThreadId)) {
+      setSelectedThreadId(null);
+    }
+  }, [selectedThreadId, setSelectedThreadId]);
+
   return {
     threads: threads ?? [],
     isLoading: threads === undefined,
@@ -114,5 +137,8 @@ export const useThreads = () => {
     deleteThreads,
     deleteAllThreads,
     updateThread,
+    archiveThread,
+    unarchiveThread,
+    archiveThreads,
   };
 }

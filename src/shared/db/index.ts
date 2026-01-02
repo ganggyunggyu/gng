@@ -26,4 +26,13 @@ db.version(1).stores({
   testRuns: 'id, testCaseId, promptVersionId, createdAt',
 });
 
+db.version(2).stores({
+  projects: 'id, name, createdAt, updatedAt',
+  promptVersions: 'id, projectId, version, createdAt',
+  threads: 'id, projectId, title, isArchived, createdAt, updatedAt',
+  messages: 'id, threadId, role, createdAt',
+  testCases: 'id, projectId, name, createdAt',
+  testRuns: 'id, testCaseId, promptVersionId, createdAt',
+});
+
 export { db };

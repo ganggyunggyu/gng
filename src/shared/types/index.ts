@@ -50,6 +50,7 @@ export interface Thread {
   projectId: string;
   title: string;
   snapshot: ThreadSnapshot | null;
+  isArchived?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }

@@ -16,6 +16,8 @@ import {
   ChevronRight,
   Pencil,
   X,
+  Archive,
+  ArchiveRestore,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/shared/ui/button';
@@ -50,13 +52,14 @@ export const Sidebar = () => {
   const setThreadReadAt = useSetAtom(setThreadReadAtAtom);
 
   const { projects, deleteProject } = useProjects();
-  const { threads, createThread, deleteThread, deleteThreads } = useThreads();
+  const { threads, createThread, deleteThread, deleteThreads, archiveThread, unarchiveThread, archiveThreads } = useThreads();
 
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedThreadIds, setSelectedThreadIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useAtom(settingsDialogOpenAtom);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   // 전체 스레드 검색 (제목 + 메시지 내용)
   const allThreads = useLiveQuery(
@@ -182,6 +185,13 @@ export const Sidebar = () => {
     exitEditMode();
   };
 
+  const handleArchiveSelected = async () => {
+    const count = selectedThreadIds.size;
+    await archiveThreads(Array.from(selectedThreadIds));
+    toast.success(`${count}개 스레드 보관됨`);
+    exitEditMode();
+  };
+
   return (
     <React.Fragment>
       {/* Mobile overlay backdrop */}
@@ -215,18 +225,29 @@ export const Sidebar = () => {
               <span className={cn('text-sm font-medium text-muted-foreground')}>Projects</span>
               <NewProjectDialog />
             </div>
-            <div className={cn('relative')}>
-              <Search
-                className={cn(
-                  'absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground',
-                )}
-              />
-              <Input
-                placeholder="Search projects & chats..."
-                className={cn('h-8 pl-7 text-sm')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className={cn('flex items-center gap-2')}>
+              <div className={cn('relative flex-1')}>
+                <Search
+                  className={cn(
+                    'absolute left-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground',
+                  )}
+                />
+                <Input
+                  placeholder="Search projects & chats..."
+                  className={cn('h-8 pl-7 text-sm')}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <Button
+                variant={showArchived ? 'secondary' : 'ghost'}
+                size="icon"
+                className={cn('h-8 w-8 shrink-0')}
+                onClick={() => setShowArchived(!showArchived)}
+                title={showArchived ? 'Show active chats' : 'Show archived chats'}
+              >
+                <Archive className={cn('h-4 w-4')} />
+              </Button>
             </div>
           </div>
 
@@ -240,9 +261,12 @@ export const Sidebar = () => {
                 filteredProjects.map((project) => {
                   const isSelected = selectedProjectId === project.id;
                   const isExpanded = isSelected || (isSearchMode && searchResults?.has(project.id));
-                  const displayThreads = isSearchMode && searchResults?.has(project.id)
+                  const baseThreads = isSearchMode && searchResults?.has(project.id)
                     ? searchResults.get(project.id) ?? []
                     : threads;
+                  const displayThreads = baseThreads.filter((t) =>
+                    showArchived ? t.isArchived : !t.isArchived
+                  );
                   return (
                     <div key={project.id} className={cn('space-y-0.5')}>
                       <div
@@ -352,7 +376,7 @@ export const Sidebar = () => {
                         <div className={cn('ml-4 space-y-0.5 border-l border-border pl-2 max-h-[55vh] overflow-y-auto scrollbar-hide')}>
                           {displayThreads.length === 0 ? (
                             <p className={cn('py-2 text-xs text-muted-foreground')}>
-                              No chats yet
+                              {showArchived ? 'No archived chats' : 'No chats yet'}
                             </p>
                           ) : (
                             displayThreads.map((thread) => {
@@ -421,6 +445,27 @@ export const Sidebar = () => {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent align="end">
+                                            {thread.isArchived ? (
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  unarchiveThread(id);
+                                                  toast.success('Unarchived');
+                                                }}
+                                              >
+                                                <ArchiveRestore className={cn('mr-2 h-4 w-4')} />
+                                                Unarchive
+                                              </DropdownMenuItem>
+                                            ) : (
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  archiveThread(id);
+                                                  toast.success('Archived');
+                                                }}
+                                              >
+                                                <Archive className={cn('mr-2 h-4 w-4')} />
+                                                Archive
+                                              </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuItem
                                               className={cn('text-destructive')}
                                               onClick={() => deleteThread(id)}
@@ -459,6 +504,18 @@ export const Sidebar = () => {
                 >
                   {selectedThreadIds.size === threads.length ? 'Deselect All' : 'Select All'}
                 </Button>
+{!showArchived && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className={cn('flex-1')}
+                    disabled={selectedThreadIds.size === 0}
+                    onClick={handleArchiveSelected}
+                  >
+                    <Archive className={cn('mr-1 h-3 w-3')} />
+                    Archive ({selectedThreadIds.size})
+                  </Button>
+                )}
                 <Button
                   variant="destructive"
                   size="sm"
