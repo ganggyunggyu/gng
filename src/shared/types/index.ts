@@ -132,3 +132,6 @@ export const createId = {
   testCase: () => `tc_gng_${crypto.randomUUID()}`,
   testRun: () => `tr_gng_${crypto.randomUUID()}`,
 };
+
+// Voice 타입
+export * from './voice';

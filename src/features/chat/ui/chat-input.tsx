@@ -11,7 +11,8 @@ import { streamingStateByThreadAtom, useMessages } from '@/entities/message';
 import { selectedProjectAtom } from '@/entities/project';
 import { selectedThreadAtom } from '@/entities/thread';
 import { isImageModeAtom } from '@/features/chat/model';
-import { useImageAttachment, useChatSubmit, useImageGenerate } from '@/features/chat/lib';
+import { useImageAttachment, useChatSubmit, useImageGenerate, useVoiceSession } from '@/features/chat/lib';
+import { VoiceButton, VoiceModal } from '@/features/chat/ui';
 
 export const ChatInput = () => {
   const [input, setInput] = useState('');
@@ -43,6 +44,7 @@ export const ChatInput = () => {
     handleDragLeave,
     handleDrop,
   } = useImageAttachment();
+  const { openVoiceMode } = useVoiceSession();
 
   useEffect(() => {
     if (!isStreaming && selectedThread) {
@@ -166,6 +168,11 @@ export const ChatInput = () => {
               <Sparkles className={cn('h-4 w-4')} />
             </Button>
 
+            <VoiceButton
+              onClick={openVoiceMode}
+              disabled={!selectedThread || isStreaming}
+            />
+
             <Textarea
               ref={textareaRef}
               value={input}
@@ -206,6 +213,8 @@ export const ChatInput = () => {
           </div>
         </div>
       </div>
+
+      <VoiceModal />
     </div>
   );
 };
