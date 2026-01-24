@@ -28,11 +28,11 @@ export const metadata: Metadata = {
   creator: '강경규',
   publisher: '강경규',
   manifest: '/manifest.json',
-  metadataBase: new URL('https://my-blog-ivory-nine.vercel.app'),
+  metadataBase: new URL('https://gng-mu.vercel.app'),
   openGraph: {
     title: '강경규 | Gng - AI Chat Workbench',
     description: '강경규의 AI Chat Workbench - prompt & model experiments를 위한 도구',
-    url: 'https://my-blog-ivory-nine.vercel.app',
+    url: 'https://gng-mu.vercel.app',
     siteName: 'Gng',
     locale: 'ko_KR',
     type: 'website',

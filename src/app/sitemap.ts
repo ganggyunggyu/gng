@@ -3,7 +3,7 @@ import { MetadataRoute } from 'next';
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: 'https://my-blog-ivory-nine.vercel.app',
+      url: 'https://gng-mu.vercel.app',
       lastModified: new Date(),
       changeFrequency: 'weekly',
       priority: 1,

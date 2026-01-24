@@ -6,6 +6,6 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: '*',
       allow: '/',
     },
-    sitemap: 'https://my-blog-ivory-nine.vercel.app/sitemap.xml',
+    sitemap: 'https://gng-mu.vercel.app/sitemap.xml',
   };
 }
